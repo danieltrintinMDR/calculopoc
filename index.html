@@ -189,8 +189,15 @@
         onAuthStateChanged(auth, async (user) => {
             currentUser = user;
             if (user) {
-                // Carrega dados do usuário
-                document.getElementById('authOverlay').style.display = 'none';
+                // Verificar domínio do e-mail
+                if (!user.email.endsWith('@mdrgestao.com.br')) {
+                    await signOut(auth);
+                    document.getElementById('authOverlay').style.display = 'flex';
+                    document.getElementById('appContainer').style.display = 'none';
+                    document.getElementById('authError').style.display = 'block';
+                    return;
+                }
+                document.getElementById('authError').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'block';
                 document.getElementById('userInfo').innerHTML =
                     `<img src="${user.photoURL||''}" style="width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-right:8px;">
@@ -256,6 +263,9 @@
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
                 Entrar com Google
             </button>
+            <div id="authError" style="display:none; margin-top:20px; background:#f8d7da; color:#721c24; padding:12px 16px; border-radius:8px; font-size:13px; border-left:4px solid #dc3545;">
+                ❌ Acesso negado. Apenas contas <strong>@mdrgestao.com.br</strong> são permitidas.
+            </div>
             <p style="margin-top:20px;font-size:11px;color:#aaa;">
                 Seus dados ficam vinculados à sua conta.<br>Apenas você vê suas obras.
             </p>
