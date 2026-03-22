@@ -162,17 +162,37 @@
         const auth     = getAuth(app);
         const fsdb     = getFirestore(app);
         const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({
+            hd: 'mdrgestao.com.br',
+            prompt: 'select_account'
+        });
 
         let currentUser = null;
 
+        function isAllowedEmail(email) {
+            return typeof email === 'string' && email.toLowerCase().endsWith('@mdrgestao.com.br');
+        }
+
         // ── Expõe funções ao escopo global para os onclick do HTML ──
         window._fbSignIn = async () => {
-            try { await signInWithPopup(auth, provider); }
-            catch(e) { alert('Erro no login: ' + e.message); }
+            try {
+                document.getElementById('authError').style.display = 'none';
+                await signInWithPopup(auth, provider);
+            } catch(e) {
+                console.error('Erro no login:', e);
+                let msg = e?.message || 'Falha ao autenticar.';
+                if (e?.code === 'auth/unauthorized-domain') {
+                    msg = 'Domínio não autorizado no Firebase. Adicione mdrgestao.com.br e www.mdrgestao.com.br em Authentication > Settings > Authorized domains.';
+                }
+                alert('Erro no login: ' + msg);
+            }
         };
 
         window._fbSignOut = async () => {
-            if (confirm('Sair da conta?')) await signOut(auth);
+            if (!confirm('Sair da conta?')) return;
+            await signOut(auth);
+            document.getElementById('authOverlay').style.display = 'flex';
+            document.getElementById('appContainer').style.display = 'none';
         };
 
         window._saveDB = async () => {
@@ -190,13 +210,15 @@
             currentUser = user;
             if (user) {
                 // Verificar domínio do e-mail
-                if (!user.email.endsWith('@mdrgestao.com.br')) {
+                if (!isAllowedEmail(user.email)) {
                     await signOut(auth);
                     document.getElementById('authOverlay').style.display = 'flex';
                     document.getElementById('appContainer').style.display = 'none';
                     document.getElementById('authError').style.display = 'block';
                     return;
                 }
+
+                document.getElementById('authOverlay').style.display = 'none';
                 document.getElementById('authError').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'block';
                 document.getElementById('userInfo').innerHTML =
@@ -219,6 +241,7 @@
                 window._initApp();
             } else {
                 document.getElementById('authOverlay').style.display = 'flex';
+                document.getElementById('authError').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'none';
                 document.getElementById('userInfo').innerHTML = '';
             }
@@ -284,12 +307,12 @@
         </div>
 
         <div class="nav">
-            <button class="nav-btn active" onclick="showTab('obras')">📋 Obras</button>
-            <button class="nav-btn" onclick="showTab('vendas')">🏷️ Vendas</button>
-            <button class="nav-btn" onclick="showTab('mensal')">📊 Lançamento Mensal</button>
-            <button class="nav-btn" onclick="showTab('relatorio')">📈 Relatórios</button>
-            <button class="nav-btn" onclick="showTab('dre')">📑 DRE</button>
-            <button class="nav-btn" onclick="showTab('backup')">💾 Backup</button>
+            <button class="nav-btn active" onclick="showTab(event, 'obras')">📋 Obras</button>
+            <button class="nav-btn" onclick="showTab(event, 'vendas')">🏷️ Vendas</button>
+            <button class="nav-btn" onclick="showTab(event, 'mensal')">📊 Lançamento Mensal</button>
+            <button class="nav-btn" onclick="showTab(event, 'relatorio')">📈 Relatórios</button>
+            <button class="nav-btn" onclick="showTab(event, 'dre')">📑 DRE</button>
+            <button class="nav-btn" onclick="showTab(event, 'backup')">💾 Backup</button>
         </div>
 
         <!-- ABA OBRAS -->
@@ -480,11 +503,13 @@
             document.getElementById('totalAliq').value = (pis + cofins + irpj + csll).toFixed(2) + '%';
         }
 
-        function showTab(tab) {
+        function showTab(event, tab) {
             document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(tab).classList.add('active');
-            event.target.classList.add('active');
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
 
             if (tab === 'vendas') renderVendas();
             if (tab === 'mensal') renderMensal();
