@@ -1,0 +1,2328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema POC - Contabilidade de Obras</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh; 
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .nav { display: flex; background: #f8f9fa; border-bottom: 2px solid #e9ecef; gap: 5px; padding: 0 20px; flex-wrap: wrap; }
+        .nav-btn { 
+            padding: 15px 25px; border: none; background: transparent; cursor: pointer; 
+            font-weight: 600; color: #666; transition: all 0.3s; border-bottom: 3px solid transparent;
+        }
+        .nav-btn:hover { color: #667eea; background: rgba(102,126,234,0.1); }
+        .nav-btn.active { color: #667eea; border-bottom-color: #667eea; background: rgba(102,126,234,0.1); }
+
+        .content { padding: 30px; display: none; }
+        .content.active { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: #f8f9fa; border-radius: 8px; padding: 25px; margin-bottom: 20px; border-left: 4px solid #667eea; }
+        .card h3 { color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; font-size: 13px; }
+        input, select { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s; }
+        input:focus, select:focus { outline: none; border-color: #667eea; }
+        input:read-only { background: #e9ecef; }
+
+        .btn { 
+            padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; 
+            transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; font-size: 13px;
+        }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        .btn-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+        .btn-dark { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 600; }
+        tr:hover { background: rgba(102,126,234,0.05); }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        .obra-list { display: grid; gap: 15px; }
+        .obra-card { background: white; border: 2px solid #e9ecef; border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s; }
+        .obra-card:hover { border-color: #667eea; transform: translateX(5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .obra-card.active { border-color: #667eea; background: rgba(102,126,234,0.05); }
+
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; }
+        .summary-card h4 { font-size: 0.85em; opacity: 0.9; margin-bottom: 8px; }
+        .summary-card .value { font-size: 1.5em; font-weight: bold; }
+        .summary-card.green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .summary-card.orange { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .summary-card.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .summary-card.purple { background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); }
+        .summary-card.red { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+        .summary-card.dark { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); }
+
+        .month-btn { padding: 8px 16px; border: 2px solid #667eea; background: white; color: #667eea; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px; margin-right: 8px; margin-bottom: 8px; }
+        .month-btn:hover, .month-btn.active { background: #667eea; color: white; }
+
+        .alert { padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-warning { background: #fff3cd; color: #856404; }
+        .alert-info { background: #d1ecf1; color: #0c5460; }
+        .alert-danger { background: #f8d7da; color: #721c24; }
+
+        .unidade-row-cadastro { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 2px solid #e9ecef; 
+            margin-bottom: 10px; 
+            display: grid; 
+            grid-template-columns: 50px 2fr 1fr 1fr auto; 
+            gap: 10px; 
+            align-items: center; 
+        }
+
+        .recebimento-row { background: white; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #667eea; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; }
+
+        .vendida { border-left: 4px solid #28a745 !important; }
+        .avenda { border-left: 4px solid #ffc107 !important; }
+
+        .contabil-demo { background: white; border-radius: 8px; overflow: hidden; margin-top: 20px; }
+        .contabil-row { display: grid; grid-template-columns: 3fr 1fr 1fr; padding: 12px; border-bottom: 1px solid #dee2e6; align-items: center; }
+        .contabil-row:last-child { border-bottom: none; }
+        .contabil-row.receita { background: rgba(102,126,234,0.1); }
+        .contabil-row.custo { background: rgba(40,167,69,0.1); }
+        .contabil-row.estoque { background: rgba(255,193,7,0.1); }
+        .contabil-row.tributo { background: rgba(220,53,69,0.1); }
+        .contabil-row.diferido { background: rgba(108,117,125,0.1); }
+        .contabil-row.lancamento { background: rgba(102,126,234,0.05); }
+        .contabil-row.lancamento:hover { background: rgba(102,126,234,0.1); }
+        .contabil-valor { font-size: 1.1em; font-weight: bold; text-align: right; }
+        .contabil-label { text-align: right; color: #666; font-size: 0.9em; }
+
+        .passivo-alert { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #dc3545; font-weight: bold; }
+        .ativo-alert { background: #d4edda; color: #155724; padding: 15px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #28a745; font-weight: bold; }
+
+        .numero-unidade { font-weight: bold; color: #667eea; font-size: 1.1em; }
+
+        .aliquotas-box { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 2px solid #e9ecef; margin: 20px 0; }
+
+        .contas-box { background: #fff3cd; padding: 20px; border-radius: 8px; border: 2px solid #ffc107; margin: 20px 0; }
+
+        .lancamento-contabil-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .lancamento-contabil-table th { background: #495057; color: white; padding: 10px; text-align: center; font-weight: 600; }
+        .lancamento-contabil-table td { padding: 10px; border: 1px solid #dee2e6; text-align: center; }
+        .lancamento-contabil-table tr:nth-child(even) { background: #f8f9fa; }
+        .lancamento-contabil-table tr:hover { background: #e9ecef; }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
+            .recebimento-row, .unidade-row-cadastro, .contabil-row { grid-template-columns: 1fr; }
+            .unidade-row-cadastro { gap: 5px; }
+            .lancamento-contabil-table { font-size: 11px; }
+            .lancamento-contabil-table th, .lancamento-contabil-table td { padding: 5px; }
+        }
+    </style>
+    <!-- ═══════════════════════════════════════════════════════════════
+         FIREBASE — substitua os valores abaixo pelas suas credenciais
+         Crie o projeto em: https://console.firebase.google.com
+         ═══════════════════════════════════════════════════════════════ -->
+    <script type="module">
+        import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAuth, signInWithPopup, signOut, onAuthStateChanged,
+                 GoogleAuthProvider }  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getFirestore, doc, getDoc, setDoc }
+                                       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+        // ▼▼▼ CREDENCIAIS DO PROJETO FIREBASE ▼▼▼
+        const firebaseConfig = {
+            apiKey:            "AIzaSyCcgoUDV_WWKlJ2xRfNJ-upDwM7F-zt3rg",
+            authDomain:        "calculopoc.firebaseapp.com",
+            projectId:         "calculopoc",
+            storageBucket:     "calculopoc.firebasestorage.app",
+            messagingSenderId: "661847231352",
+            appId:             "1:661847231352:web:95258add703aea9f8f968d"
+        };
+        // ▲▲▲ ─────────────────────────────────────────────────── ▲▲▲
+
+        const app      = initializeApp(firebaseConfig);
+        const auth     = getAuth(app);
+        const fsdb     = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+
+        // ── Expõe funções ao escopo global para os onclick do HTML ──
+        window._fbSignIn = async () => {
+            try { await signInWithPopup(auth, provider); }
+            catch(e) { alert('Erro no login: ' + e.message); }
+        };
+
+        window._fbSignOut = async () => {
+            if (confirm('Sair da conta?')) await signOut(auth);
+        };
+
+        window._saveDB = async () => {
+            if (!currentUser) return;
+            try {
+                await setDoc(
+                    doc(fsdb, 'usuarios', currentUser.uid),
+                    { dados: JSON.stringify(window._db) }
+                );
+            } catch(e) { console.error('Erro ao salvar:', e); }
+        };
+
+        // ── Observa estado de autenticação ──────────────────────────
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            if (user) {
+                // Carrega dados do usuário
+                document.getElementById('authOverlay').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                document.getElementById('userInfo').innerHTML =
+                    `<img src="${user.photoURL||''}" style="width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-right:8px;">
+                     <span style="font-size:13px;font-weight:600;">${user.displayName||user.email}</span>
+                     <button onclick="_fbSignOut()" class="btn btn-secondary"
+                         style="margin-left:12px;padding:5px 12px;font-size:12px;">Sair</button>`;
+
+                try {
+                    const snap = await getDoc(doc(fsdb, 'usuarios', user.uid));
+                    if (snap.exists()) {
+                        window._db = JSON.parse(snap.data().dados);
+                    } else {
+                        window._db = { obras: [], currentObraId: null };
+                    }
+                } catch(e) {
+                    console.error('Erro ao carregar:', e);
+                    window._db = { obras: [], currentObraId: null };
+                }
+                window._initApp();
+            } else {
+                document.getElementById('authOverlay').style.display = 'flex';
+                document.getElementById('appContainer').style.display = 'none';
+                document.getElementById('userInfo').innerHTML = '';
+            }
+        });
+    </script>
+
+    <style>
+        /* ── Auth overlay ───────────────────────────────────────── */
+        #authOverlay {
+            position: fixed; inset: 0; background: linear-gradient(135deg,#1e3c72,#2a5298);
+            display: flex; align-items: center; justify-content: center; z-index: 99999;
+        }
+        .auth-box {
+            background: white; border-radius: 16px; padding: 48px 40px; text-align: center;
+            max-width: 400px; width: 90%; box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+        }
+        .auth-box h2 { color: #333; margin-bottom: 8px; font-size: 1.6em; }
+        .auth-box p  { color: #666; margin-bottom: 28px; font-size: 14px; }
+        .btn-google {
+            display: inline-flex; align-items: center; gap: 12px;
+            background: white; border: 2px solid #ddd; border-radius: 8px;
+            padding: 12px 24px; font-size: 15px; font-weight: 600; cursor: pointer;
+            color: #333; transition: all .2s; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .btn-google:hover { border-color: #667eea; box-shadow: 0 4px 16px rgba(102,126,234,.3); }
+        .btn-google img   { width: 22px; }
+        /* ── User bar ───────────────────────────────────────────── */
+        #userBar {
+            background: #343a40; padding: 8px 20px;
+            display: flex; align-items: center; justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <!-- ── Tela de login ──────────────────────────────────────────── -->
+    <div id="authOverlay">
+        <div class="auth-box">
+            <div style="font-size:56px;margin-bottom:12px;">🏗️</div>
+            <h2>Sistema POC</h2>
+            <p>Contabilidade de Obras — acesso restrito à equipe.<br>Faça login com sua conta Google corporativa.</p>
+            <button class="btn-google" onclick="_fbSignIn()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
+                Entrar com Google
+            </button>
+            <p style="margin-top:20px;font-size:11px;color:#aaa;">
+                Seus dados ficam vinculados à sua conta.<br>Apenas você vê suas obras.
+            </p>
+        </div>
+    </div>
+
+    <!-- ── App principal (oculto até login) ─────────────────────── -->
+    <div id="appContainer" style="display:none;">
+        <div id="userBar">
+            <div id="userInfo"></div>
+        </div>
+        <div class="container">
+        <div class="header">
+            <h1>🏗️ Sistema POC - Contabilidade</h1>
+            <p>Controle Percentual de Conclusão com Tributos e Diferidos</p>
+        </div>
+
+        <div class="nav">
+            <button class="nav-btn active" onclick="showTab('obras')">📋 Obras</button>
+            <button class="nav-btn" onclick="showTab('vendas')">🏷️ Vendas</button>
+            <button class="nav-btn" onclick="showTab('mensal')">📊 Lançamento Mensal</button>
+            <button class="nav-btn" onclick="showTab('relatorio')">📈 Relatórios</button>
+            <button class="nav-btn" onclick="showTab('dre')">📑 DRE</button>
+            <button class="nav-btn" onclick="showTab('backup')">💾 Backup</button>
+        </div>
+
+        <!-- ABA OBRAS -->
+        <div id="obras" class="content active">
+            <div class="card">
+                <h3>🏗️ Selecionar ou Criar Obra</h3>
+                <div id="obraList" class="obra-list"></div>
+            </div>
+
+            <div class="card" id="novaObraForm">
+                <h3>➕ Nova Obra</h3>
+
+                <!-- DADOS BÁSICOS -->
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Nome da Obra *</label>
+                        <input type="text" id="nomeObra" placeholder="Ex: Residencial Villa Favero">
+                    </div>
+                    <div class="form-group">
+                        <label>Empreendimento/Empresa *</label>
+                        <input type="text" id="empreendimentoObra" placeholder="Ex: TFT Empreendimentos SPE Ltda">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Custo Orçado Total (R$) *</label>
+                        <input type="number" id="custoOrcado" placeholder="7366130.91" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Metragem Total da Obra (m²)</label>
+                        <input type="number" id="metragemTotal" placeholder="Será calculado automaticamente" step="0.01" readonly style="background: #e9ecef; font-weight: bold; color: #667eea;">
+                    </div>
+                </div>
+
+                <!-- ALÍQUOTAS TRIBUTÁRIAS -->
+                <div class="aliquotas-box">
+                    <h4 style="margin-bottom: 15px; color: #495057;">⚙️ Alíquotas Tributárias (%)</h4>
+                    <div class="grid-5">
+                        <div class="form-group" style="margin: 0;">
+                            <label>PIS (%)</label>
+                            <input type="number" id="aliqPIS" placeholder="0.65" step="0.01" value="0.65">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label>COFINS (%)</label>
+                            <input type="number" id="aliqCOFINS" placeholder="3.00" step="0.01" value="3.00">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label>IRPJ (%)</label>
+                            <input type="number" id="aliqIRPJ" placeholder="15.00" step="0.01" value="15.00">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label>CSLL (%)</label>
+                            <input type="number" id="aliqCSLL" placeholder="9.00" step="0.01" value="9.00">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label>Total Tributos (%)</label>
+                            <input type="text" id="totalAliq" readonly style="background: #e9ecef; font-weight: bold;" value="27.65%">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTAS CONTÁBEIS -->
+                <div class="contas-box">
+                    <h4 style="margin-bottom: 15px; color: #856404;">📒 Configuração das Contas Contábeis</h4>
+                    <p style="font-size: 12px; color: #856404; margin-bottom: 15px;">Configure as contas contábeis para os lançamentos automáticos conforme plano de contas da empresa</p>
+                    <div class="grid-5">
+                        <div class="form-group" style="margin: 0;">
+                            <label>Compras Mensal (Débito)</label>
+                            <input type="text" id="contaCompras" placeholder="615" value="615" style="font-weight: bold;">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label>Estoque</label>
+                            <input type="text" id="contaEstoque" placeholder="616" value="616" style="font-weight: bold;">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label>Receita Mensal (Crédito)</label>
+                            <input type="text" id="contaReceita" placeholder="2006" value="2006" style="font-weight: bold;">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label>Adiantamentos Cliente POC</label>
+                            <input type="text" id="contaAdiantamento" placeholder="6005" value="6005" style="font-weight: bold;">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label>Custo da Obra</label>
+                            <input type="text" id="contaCusto" placeholder="3015" value="3015" style="font-weight: bold;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UNIDADES -->
+                <div style="background: #e9ecef; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h4 style="margin-bottom: 15px; color: #495057;">📐 Cadastro das Unidades</h4>
+                    <div style="max-width: 200px;">
+                        <label>Quantidade de Unidades *</label>
+                        <input type="number" id="numUnidades" placeholder="Ex: 20" min="1" style="font-size: 1.1em; font-weight: bold;">
+                    </div>
+                    <button class="btn btn-primary" onclick="gerarCamposUnidades()" style="margin-top: 10px;">🔄 Gerar Campos das Unidades</button>
+                </div>
+
+                <div id="unidadesContainer" style="margin-top: 20px; display: none;">
+                    <h4 style="margin-bottom: 15px; color: #495057;">✏️ Preencha os dados de cada unidade</h4>
+                    <div id="listaUnidades"></div>
+                </div>
+
+                <div id="totalDisplay" style="display: none; margin: 20px 0; padding: 20px; background: #d4edda; border-radius: 8px; border-left: 4px solid #28a745; font-weight: bold; color: #155724; font-size: 1.1em;">
+                    ✅ Metragem Total Calculada: <span id="totalMetragemDisplay">0,00 m²</span>
+                </div>
+
+                <button class="btn btn-success" onclick="criarObra()" style="margin-top: 20px; font-size: 1.1em; padding: 15px 30px;">💾 Criar Obra</button>
+            </div>
+        </div>
+
+        <!-- ABA VENDAS -->
+        <div id="vendas" class="content">
+            <div id="vendasContent"></div>
+        </div>
+
+        <!-- ABA LANÇAMENTO MENSAL -->
+        <div id="mensal" class="content">
+            <div id="mensalContent"></div>
+        </div>
+
+        <!-- ABA RELATÓRIOS -->
+        <div id="relatorio" class="content">
+            <div id="relatorioContent"></div>
+        </div>
+
+        <!-- ABA DRE -->
+        <div id="dre" class="content">
+            <div id="dreContent"></div>
+        </div>
+
+        <!-- ABA BACKUP -->
+        <div id="backup" class="content">
+            <div class="card">
+                <h3>💾 Exportar/Importar Dados</h3>
+                <div class="grid-2">
+                    <div>
+                        <h4>Exportar</h4>
+                        <button class="btn btn-success" onclick="exportarDados()">📥 Exportar JSON</button>
+                        <button class="btn btn-primary" onclick="exportarExcel()" style="margin-left: 10px;">📊 Exportar CSV</button>
+                    </div>
+                    <div>
+                        <h4>Importar</h4>
+                        <input type="file" id="importFile" accept=".json" onchange="importarDados(this)" style="margin-bottom: 10px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- /appContainer -->
+
+    <script>
+        // ── db aponta para window._db (preenchido pelo Firebase) ──
+        // Usamos um Proxy para que `db` seja sempre o objeto atual
+        let _dbInternal = { obras: [], currentObraId: null };
+        window._db = _dbInternal;
+        const db = new Proxy({}, {
+            get: (_, k) => window._db[k],
+            set: (_, k, v) => { window._db[k] = v; return true; }
+        });
+
+        let mesAtivo = null;
+
+        // Chamado pelo Firebase após autenticação e carregamento dos dados
+        window._initApp = function() {
+            renderObras();
+            ['aliqPIS', 'aliqCOFINS', 'aliqIRPJ', 'aliqCSLL'].forEach(id => {
+                document.getElementById(id)?.addEventListener('input', atualizarTotalAliq);
+            });
+        };
+
+        function init() {
+            // init agora é no-op — o Firebase chama _initApp após carregar os dados
+            // Mantido para compatibilidade com chamadas antigas
+        }
+
+        function saveDB() {
+            // Salva no Firebase (assíncrono, sem bloquear a UI)
+            if (window._saveDB) window._saveDB();
+        }
+
+        function atualizarTotalAliq() {
+            const pis    = parseFloat(document.getElementById('aliqPIS').value)    || 0;
+            const cofins = parseFloat(document.getElementById('aliqCOFINS').value) || 0;
+            const irpj   = parseFloat(document.getElementById('aliqIRPJ').value)   || 0;
+            const csll   = parseFloat(document.getElementById('aliqCSLL').value)   || 0;
+            document.getElementById('totalAliq').value = (pis + cofins + irpj + csll).toFixed(2) + '%';
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tab === 'vendas') renderVendas();
+            if (tab === 'mensal') renderMensal();
+            if (tab === 'relatorio') renderRelatorio();
+            if (tab === 'dre') renderDRE();
+        }
+
+        function formatMoney(value) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+        }
+
+        function formatMes(mesStr) {
+            if (!mesStr) return '-';
+            const [ano, mes] = mesStr.split('-');
+            return `${mes}/${ano}`;
+        }
+
+        // ===== CADASTRO DE OBRA =====
+        function gerarCamposUnidades() {
+            const num = parseInt(document.getElementById('numUnidades').value);
+
+            if (!num || num <= 0) {
+                alert('Informe uma quantidade válida de unidades (mínimo 1)');
+                return;
+            }
+
+            const container = document.getElementById('unidadesContainer');
+            const lista = document.getElementById('listaUnidades');
+
+            container.style.display = 'block';
+            lista.innerHTML = '';
+
+            for (let i = 1; i <= num; i++) {
+                const div = document.createElement('div');
+                div.className = 'unidade-row-cadastro';
+                div.innerHTML = `
+                    <div class="numero-unidade">${i}</div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 11px; margin-bottom: 2px;">Nome da Unidade</label>
+                        <input type="text" id="unidade-nome-${i}" value="CASA ${String(i).padStart(2,'0')}" style="padding: 8px; font-size: 13px;">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 11px; margin-bottom: 2px;">Tipo</label>
+                        <select id="unidade-tipo-${i}" style="padding: 8px; font-size: 13px;" onchange="atualizarNomeCadastro(${i})">
+                            <option value="CASA">🏠 CASA</option>
+                            <option value="LOTE">🌳 LOTE</option>
+                            <option value="APTO">🏢 APTO</option>
+                            <option value="SALA">🏪 SALA</option>
+                            <option value="LOJA">🏬 LOJA</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 11px; margin-bottom: 2px; color: #dc3545;">Metragem (m²) *</label>
+                        <input type="number" id="unidade-m2-${i}" placeholder="0.00" step="0.01" 
+                               oninput="calcularTotalMetragem()" 
+                               style="padding: 8px; font-size: 13px; font-weight: bold; border-color: #667eea;">
+                    </div>
+                    <button class="btn btn-secondary" onclick="removerUnidadeCadastro(this)" style="height: 36px; padding: 0 12px; font-size: 12px;">🗑️</button>
+                `;
+                lista.appendChild(div);
+            }
+
+            document.getElementById('totalDisplay').style.display = 'none';
+            calcularTotalMetragem();
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function atualizarNomeCadastro(i) {
+            const tipo = document.getElementById(`unidade-tipo-${i}`).value;
+            const nomeInput = document.getElementById(`unidade-nome-${i}`);
+            const num = nomeInput.value.match(/\d+/)?.[0] || String(i).padStart(2,'0');
+            nomeInput.value = `${tipo} ${num}`;
+        }
+
+        function removerUnidadeCadastro(btn) {
+            btn.closest('.unidade-row-cadastro').remove();
+            calcularTotalMetragem();
+        }
+
+        function calcularTotalMetragem() {
+            let total = 0;
+            const num = parseInt(document.getElementById('numUnidades').value) || 0;
+
+            for (let i = 1; i <= num; i++) {
+                const m2Input = document.getElementById(`unidade-m2-${i}`);
+                if (m2Input) {
+                    const val = parseFloat(m2Input.value) || 0;
+                    total += val;
+                }
+            }
+
+            document.getElementById('metragemTotal').value = total.toFixed(2);
+
+            if (total > 0) {
+                document.getElementById('totalDisplay').style.display = 'block';
+                document.getElementById('totalMetragemDisplay').textContent = total.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' m²';
+            } else {
+                document.getElementById('totalDisplay').style.display = 'none';
+            }
+
+            return total;
+        }
+
+        function criarObra() {
+            const nome = document.getElementById('nomeObra').value.trim();
+            const empreendimento = document.getElementById('empreendimentoObra').value.trim();
+            const custoOrcado = parseFloat(document.getElementById('custoOrcado').value) || 0;
+            const metragemTotal = parseFloat(document.getElementById('metragemTotal').value) || 0;
+            const numUnidades = parseInt(document.getElementById('numUnidades').value) || 0;
+
+            // Alíquotas
+            const aliqPIS = parseFloat(document.getElementById('aliqPIS').value) || 0;
+            const aliqCOFINS = parseFloat(document.getElementById('aliqCOFINS').value) || 0;
+            const aliqIRPJ = parseFloat(document.getElementById('aliqIRPJ').value) || 0;
+            const aliqCSLL = parseFloat(document.getElementById('aliqCSLL').value) || 0;
+
+            // Contas Contábeis
+            const contaCompras = document.getElementById('contaCompras').value.trim() || '615';
+            const contaEstoque = document.getElementById('contaEstoque').value.trim() || '616';
+            const contaReceita = document.getElementById('contaReceita').value.trim() || '2006';
+            const contaAdiantamento = document.getElementById('contaAdiantamento').value.trim() || '6005';
+            const contaCusto = document.getElementById('contaCusto').value.trim() || '3015';
+
+            if (!nome) return alert('⚠️ Informe o NOME da obra');
+            if (!empreendimento) return alert('⚠️ Informe o EMPREENDIMENTO');
+            if (custoOrcado <= 0) return alert('⚠️ Informe o CUSTO ORÇADO');
+            if (numUnidades <= 0) return alert('⚠️ Informe a QUANTIDADE de unidades');
+            if (metragemTotal <= 0) return alert('⚠️ A METRAGEM TOTAL deve ser maior que zero');
+
+            // Coletar dados das unidades
+            const unidades = [];
+            let metragemCalculada = 0;
+
+            for (let i = 1; i <= numUnidades; i++) {
+                const nomeUnid = document.getElementById(`unidade-nome-${i}`)?.value || `Unidade ${i}`;
+                const tipoUnid = document.getElementById(`unidade-tipo-${i}`)?.value || 'CASA';
+                const m2Unid = parseFloat(document.getElementById(`unidade-m2-${i}`)?.value) || 0;
+
+                if (m2Unid <= 0) {
+                    alert(`⚠️ A unidade ${i} (${nomeUnid}) está com metragem zerada.`);
+                    return;
+                }
+
+                metragemCalculada += m2Unid;
+
+                unidades.push({
+                    id: i,
+                    nome: nomeUnid,
+                    tipo: tipoUnid,
+                    m2: m2Unid,
+                    rateio: 0,
+                    custoUnitario: 0,
+                    vendida: false,
+                    cliente: '',
+                    dataVenda: '',
+                    valorVenda: 0,
+                    valorRecebidoTotal: 0
+                });
+            }
+
+            // Calcular rateios e custos unitários
+            const custoM2 = custoOrcado / metragemCalculada;
+            unidades.forEach(u => {
+                u.rateio = u.m2 / metragemCalculada;
+                u.custoUnitario = u.m2 * custoM2;
+            });
+
+            const obra = {
+                id: Date.now(),
+                nome: nome,
+                empreendimento: empreendimento,
+                custoOrcado: custoOrcado,
+                metragemTotal: metragemCalculada,
+                custoM2: custoM2,
+                aliquotas: {
+                    PIS: aliqPIS,
+                    COFINS: aliqCOFINS,
+                    IRPJ: aliqIRPJ,
+                    CSLL: aliqCSLL
+                },
+                contasContabeis: {
+                    compras: contaCompras,
+                    estoque: contaEstoque,
+                    receita: contaReceita,
+                    adiantamento: contaAdiantamento,
+                    custo: contaCusto
+                },
+                unidades: unidades,
+                lancamentos: {}
+            };
+
+            db.obras.push(obra);
+            saveDB();
+            renderObras();
+
+            // Limpar formulário
+            document.getElementById('nomeObra').value = '';
+            document.getElementById('empreendimentoObra').value = '';
+            document.getElementById('custoOrcado').value = '';
+            document.getElementById('metragemTotal').value = '';
+            document.getElementById('numUnidades').value = '';
+            document.getElementById('unidadesContainer').style.display = 'none';
+            document.getElementById('totalDisplay').style.display = 'none';
+            document.getElementById('aliqPIS').value = '0.65';
+            document.getElementById('aliqCOFINS').value = '3.00';
+            document.getElementById('aliqIRPJ').value = '15.00';
+            document.getElementById('aliqCSLL').value = '9.00';
+            atualizarTotalAliq();
+
+            alert(`✅ Obra "${nome}" criada com sucesso!\n\n📊 Resumo:\n• ${unidades.length} unidades\n• Metragem Total: ${metragemCalculada.toFixed(2)} m²\n• Custo/m²: ${formatMoney(custoM2)}\n• Total Alíquotas: ${(aliqPIS + aliqCOFINS + aliqIRPJ + aliqCSLL).toFixed(2)}%`);
+        }
+
+        function renderObras() {
+            const container = document.getElementById('obraList');
+            if (db.obras.length === 0) {
+                container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Nenhuma obra cadastrada. Preencha o formulário abaixo.</p>';
+                return;
+            }
+
+            container.innerHTML = db.obras.map(obra => {
+                const vendidas = obra.unidades.filter(u => u.vendida).length;
+                const totalAliq = (obra.aliquotas.PIS + obra.aliquotas.COFINS + obra.aliquotas.IRPJ + obra.aliquotas.CSLL).toFixed(2);
+                return `
+                    <div class="obra-card ${db.currentObraId === obra.id ? 'active' : ''}" onclick="selecionarObra(${obra.id})" style="position:relative;">
+                        <h4>${obra.nome}</h4>
+                        <p><strong>Empreendimento:</strong> ${obra.empreendimento}</p>
+                        <p><strong>Custo Orç:</strong> ${formatMoney(obra.custoOrcado)} | <strong>Unid:</strong> ${obra.unidades.length} (${vendidas} vend)</p>
+                        <p><strong>Metragem:</strong> ${obra.metragemTotal?.toFixed(2)} m² | <strong>Alíq. Total:</strong> ${totalAliq}%</p>
+                        <span class="badge ${db.currentObraId === obra.id ? 'badge-success' : 'badge-secondary'}">
+                            ${db.currentObraId === obra.id ? 'SELECIONADA' : 'CLIQUE PARA SELECIONAR'}
+                        </span>
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); confirmarExclusaoObra(${obra.id}, '${obra.nome.replace(/'/g, "\\'")}')"
+                            style="position:absolute; top:15px; right:15px; padding:6px 14px; font-size:12px;">
+                            🗑️ Excluir
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function confirmarExclusaoObra(id, nome) {
+            // Modal de confirmação com digitação de CONFIRMO
+            const overlay = document.createElement('div');
+            overlay.id = 'modalExclusao';
+            overlay.style.cssText = `
+                position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999;
+                display:flex; align-items:center; justify-content:center;
+            `;
+            overlay.innerHTML = `
+                <div style="background:white; border-radius:12px; padding:35px; max-width:440px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.4); text-align:center;">
+                    <div style="font-size:48px; margin-bottom:10px;">⚠️</div>
+                    <h3 style="color:#dc3545; margin-bottom:10px;">Excluir Obra</h3>
+                    <p style="color:#333; margin-bottom:6px;">Você está prestes a excluir permanentemente:</p>
+                    <p style="font-weight:700; font-size:1.1em; color:#495057; background:#f8f9fa; padding:10px; border-radius:6px; margin-bottom:16px;">${nome}</p>
+                    <p style="color:#666; font-size:13px; margin-bottom:16px;">
+                        Esta ação é <strong>irreversível</strong> e apagará todas as unidades, vendas e lançamentos mensais desta obra.
+                    </p>
+                    <p style="color:#333; font-size:13px; margin-bottom:8px;">Para confirmar, digite <strong style="color:#dc3545;">CONFIRMO</strong> abaixo:</p>
+                    <input type="text" id="inputConfirmo" placeholder="Digite CONFIRMO" autocomplete="off"
+                        style="width:100%; padding:12px; border:2px solid #dee2e6; border-radius:6px; font-size:15px; text-align:center; letter-spacing:2px; margin-bottom:20px;"
+                        oninput="document.getElementById('btnConfirmarExclusao').disabled = this.value !== 'CONFIRMO';">
+                    <div style="display:flex; gap:12px; justify-content:center;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('modalExclusao').remove()" style="padding:10px 24px;">
+                            Cancelar
+                        </button>
+                        <button id="btnConfirmarExclusao" class="btn btn-danger" disabled
+                            onclick="excluirObra(${id})" style="padding:10px 24px;">
+                            🗑️ Excluir Definitivamente
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => document.getElementById('inputConfirmo')?.focus(), 50);
+        }
+
+        function excluirObra(id) {
+            document.getElementById('modalExclusao')?.remove();
+            db.obras = db.obras.filter(o => o.id !== id);
+            if (db.currentObraId === id) {
+                db.currentObraId = db.obras.length > 0 ? db.obras[0].id : null;
+            }
+            saveDB();
+            renderObras();
+        }
+
+        function selecionarObra(id) {
+            db.currentObraId = id;
+            saveDB();
+            renderObras();
+        }
+
+        function getObraAtual() {
+            return db.obras.find(o => o.id === db.currentObraId);
+        }
+
+        // ===== VENDAS =====
+        function renderVendas() {
+            const obra = getObraAtual();
+            if (!obra) return document.getElementById('vendasContent').innerHTML = '<div class="alert alert-warning">Selecione uma obra na aba "Obras" primeiro.</div>';
+
+            const vendidas = obra.unidades.filter(u => u.vendida);
+            const totalVendido = vendidas.reduce((sum, u) => sum + (u.valorVenda || 0), 0);
+
+            let html = `
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <h4>Unidades Vendidas</h4>
+                        <div class="value">${vendidas.length} / ${obra.unidades.length}</div>
+                    </div>
+                    <div class="summary-card green">
+                        <h4>Valor Total Vendido</h4>
+                        <div class="value">${formatMoney(totalVendido)}</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>🏷️ Controle de Vendas</h3>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 13px;">
+                        Marque as unidades vendidas e informe os dados. O POC será calculado sobre o valor da venda.
+                    </p>
+            `;
+
+            obra.unidades.forEach((u, idx) => {
+                html += `
+                    <div class="card ${u.vendida ? 'vendida' : 'avenda'}" style="margin-bottom: 15px; padding: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${u.vendida ? '15px' : '0'};">
+                            <div>
+                                <h4 style="margin: 0;">${u.tipo} ${u.nome}</h4>
+                                <p style="margin: 5px 0 0 0; font-size: 13px; color: #666;">
+                                    ${u.m2} m² | Custo Orçado: ${formatMoney(u.custoUnitario)}
+                                </p>
+                            </div>
+                            <button class="btn ${u.vendida ? 'btn-danger' : 'btn-success'}" onclick="toggleVenda(${idx})" style="min-width: 160px;">
+                                ${u.vendida ? '❌ Cancelar Venda' : '✓ Marcar como Vendida'}
+                            </button>
+                        </div>
+
+                        ${u.vendida ? `
+                            <div class="grid-3" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6;">
+                                <div class="form-group">
+                                    <label>Cliente *</label>
+                                    <input type="text" value="${u.cliente || ''}" onchange="updateVenda(${idx}, 'cliente', this.value)" placeholder="Nome completo">
+                                </div>
+                                <div class="form-group">
+                                    <label>Data da Venda</label>
+                                    <input type="date" value="${u.dataVenda || ''}" onchange="updateVenda(${idx}, 'dataVenda', this.value)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Valor da Venda (R$) *</label>
+                                    <input type="number" value="${u.valorVenda || ''}" onchange="updateVenda(${idx}, 'valorVenda', this.value)" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            document.getElementById('vendasContent').innerHTML = html;
+        }
+
+        function toggleVenda(idx) {
+            const obra = getObraAtual();
+            obra.unidades[idx].vendida = !obra.unidades[idx].vendida;
+            if (!obra.unidades[idx].vendida) {
+                obra.unidades[idx].cliente = '';
+                obra.unidades[idx].dataVenda = '';
+                obra.unidades[idx].valorVenda = 0;
+            }
+            saveDB();
+            renderVendas();
+        }
+
+        function updateVenda(idx, field, value) {
+            const obra = getObraAtual();
+            if (field === 'valorVenda') value = parseFloat(value) || 0;
+            obra.unidades[idx][field] = value;
+            saveDB();
+        }
+
+        // ===== LANÇAMENTO MENSAL =====
+        function renderMensal() {
+            const obra = getObraAtual();
+            if (!obra) return document.getElementById('mensalContent').innerHTML = '<div class="alert alert-warning">Selecione uma obra na aba "Obras" primeiro.</div>';
+
+            const mesesExistentes = Object.keys(obra.lancamentos).sort();
+
+            let html = `
+                <div class="card">
+                    <h3>📅 Meses de Competência</h3>
+                    <div style="margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center;">
+                        ${mesesExistentes.map(m => `<button class="month-btn ${m === mesAtivo ? 'active' : ''}" onclick="abrirMes('${m}')">${formatMes(m)}</button>`).join('')}
+                        <button class="btn btn-success" onclick="criarNovoMes()" style="margin-left: 10px;">➕ Criar Novo Mês</button>
+                    </div>
+
+                    ${mesAtivo ? `
+                    <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <strong>🔄 Reset de Cálculos</strong><br>
+                                <small style="color: #856404;">Use este botão quando houver alterações nos valores de venda. Mantém custos e recebimentos preenchidos, mas recalcula receitas, tributos e diferidos.</small>
+                            </div>
+                            <button class="btn btn-warning" onclick="resetCalculosMes('${mesAtivo}')">⚠️ Resetar Cálculos do Mês</button>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div id="novoMesForm" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                        <h4 style="margin-bottom: 15px;">Criar Novo Mês de Competência</h4>
+                        <div class="grid-2" style="max-width: 400px;">
+                            <div class="form-group" style="margin: 0;">
+                                <label>Ano</label>
+                                <input type="number" id="novoAno" value="${new Date().getFullYear()}">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label>Mês</label>
+                                <select id="novoMes" style="padding: 10px;">
+                                    ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m => {
+                                        const mesStr = String(m).padStart(2,'0');
+                                        const nomeMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][m-1];
+                                        return `<option value="${mesStr}">${mesStr} - ${nomeMes}</option>`;
+                                    }).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="confirmarNovoMes()" style="margin-top: 15px;">✓ Criar Mês</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('novoMesForm').style.display='none'" style="margin-top: 15px; margin-left: 10px;">Cancelar</button>
+                    </div>
+                </div>
+
+                <div id="lancamentoForm">
+                    ${mesesExistentes.length === 0 ? 
+                        '<div class="alert alert-info">Crie o primeiro mês de competência clicando em "Criar Novo Mês".</div>' : 
+                        '<div class="alert alert-info">Selecione um mês acima para lançar os dados.</div>'
+                    }
+                </div>
+            `;
+
+            document.getElementById('mensalContent').innerHTML = html;
+        }
+
+        function resetCalculosMes(mes) {
+            if (!confirm('⚠️ ATENÇÃO: Isso irá recalcular todos os valores de Receita POC, Adiantamentos, Tributos e Diferidos para este mês, mantendo apenas os Custos Incorridos e Recebimentos preenchidos manualmente.\n\nDeseja continuar?')) {
+                return;
+            }
+
+            const obra = getObraAtual();
+            const lanc = obra.lancamentos[mes];
+
+            // Limpar apenas campos calculados, mantendo custoMensal e recebimentosPorUnidade
+            delete lanc.receitaPOCAcumulada;
+            delete lanc.receitaPOCMensal;
+            delete lanc.adiantamentoClientes;
+            delete lanc.recebimentosTotaisMes;
+            delete lanc.tributos;
+            delete lanc.diferidos;
+
+            saveDB();
+            abrirMes(mes);
+            alert('✅ Cálculos resetados com sucesso! Recalcule o mês para ver os novos valores.');
+        }
+
+        function criarNovoMes() {
+            document.getElementById('novoMesForm').style.display = 'block';
+        }
+
+        function confirmarNovoMes() {
+            const ano = document.getElementById('novoAno').value;
+            const mes = document.getElementById('novoMes').value;
+            const mesKey = `${ano}-${mes}`;
+
+            const obra = getObraAtual();
+            if (obra.lancamentos[mesKey]) {
+                alert('⚠️ Este mês já existe!');
+                return;
+            }
+
+            obra.lancamentos[mesKey] = {
+                custoMensal: 0,
+                recebimentosPorUnidade: {}
+            };
+
+            saveDB();
+            renderMensal();
+            setTimeout(() => {
+                mesAtivo = mesKey;
+                abrirMes(mesKey);
+            }, 100);
+        }
+
+        function abrirMes(mes) {
+            mesAtivo = mes;
+            const obra = getObraAtual();
+            const lanc = obra.lancamentos[mes];
+
+            // Unidades vendidas cuja competência de venda é ATÉ este mês
+            // Se dataVenda estiver vazia numa unidade marcada como vendida, alertamos mas não bloqueamos
+            const vendidasSemData = obra.unidades.filter(u => u.vendida && !u.dataVenda);
+            const vendidas = obra.unidades.filter(u => {
+                if (!u.vendida || !u.dataVenda) return false;
+                return u.dataVenda.substring(0, 7) <= mes;
+            });
+            const valorTotalVendido = vendidas.reduce((sum, u) => sum + (u.valorVenda || 0), 0);
+
+            // Aviso se há unidades vendidas sem data preenchida
+            const avisoSemData = vendidasSemData.length > 0
+                ? `<div class="alert alert-warning" style="margin-bottom:15px;">
+                      ⚠️ <strong>${vendidasSemData.length} unidade(s) marcada(s) como vendida(s) sem data de venda:</strong>
+                      ${vendidasSemData.map(u => `<strong>${u.nome}</strong>`).join(', ')}.
+                      Preencha a data na aba "Vendas" para que sejam incluídas nos cálculos.
+                   </div>`
+                : '';
+
+            // Meses sem nenhuma venda ainda são válidos — apenas os custos vão 100% para estoque
+
+            // Calcular acumulados até mês ANTERIOR
+            const mesesAnteriores = Object.keys(obra.lancamentos).filter(m => m < mes).sort();
+            let custoAcumuladoAnt = 0;
+            let recebimentosTotaisAnt = 0;
+
+            mesesAnteriores.forEach(m => {
+                const lm = obra.lancamentos[m];
+                custoAcumuladoAnt += lm.custoMensal || 0;
+                Object.values(lm.recebimentosPorUnidade || {}).forEach(v => {
+                    recebimentosTotaisAnt += v || 0;
+                });
+            });
+
+            // Dados do mês atual
+            const custoMensal = lanc.custoMensal || 0;
+            const custoAcumuladoAtual = custoAcumuladoAnt + custoMensal;
+
+            // CÁLCULO POC
+            let percentualExecutado = obra.custoOrcado > 0 ? (custoAcumuladoAtual / obra.custoOrcado) * 100 : 0;
+            if (percentualExecutado > 100) percentualExecutado = 100;
+
+            let percentualExecutadoAnt = obra.custoOrcado > 0 ? (custoAcumuladoAnt / obra.custoOrcado) * 100 : 0;
+            if (percentualExecutadoAnt > 100) percentualExecutadoAnt = 100;
+
+            // valorTotalVendido anterior: apenas unidades cuja venda ocorreu ATÉ o mês ANTERIOR
+            // (uma unidade vendida em 08/2024 não existia como venda em 07/2024 — não gera receita anterior)
+            const mesAnterior = mesesAnteriores.length > 0 ? mesesAnteriores[mesesAnteriores.length - 1] : null;
+            const vendidasAnt = obra.unidades.filter(u => {
+                if (!u.vendida || !u.dataVenda) return false;
+                return u.dataVenda.substring(0, 7) < mes; // estritamente anterior
+            });
+            const valorTotalVendidoAnt = vendidasAnt.reduce((sum, u) => sum + (u.valorVenda || 0), 0);
+
+            const receitaPOCAcumulada    = valorTotalVendido    * (percentualExecutado    / 100);
+            const receitaPOCAcumuladaAnt = valorTotalVendidoAnt * (percentualExecutadoAnt / 100);
+            const receitaPOCMensal       = receitaPOCAcumulada - receitaPOCAcumuladaAnt;
+            const adiantamentoClientes   = valorTotalVendido - receitaPOCAcumulada;
+
+            let recebimentosMes = 0;
+            Object.values(lanc.recebimentosPorUnidade || {}).forEach(v => {
+                recebimentosMes += v || 0;
+            });
+
+            const recebimentosTotaisAtual = recebimentosTotaisAnt + recebimentosMes;
+
+            // CÁLCULO DE TRIBUTOS
+            const tribPIS = recebimentosMes * (obra.aliquotas.PIS / 100);
+            const tribCOFINS = recebimentosMes * (obra.aliquotas.COFINS / 100);
+            const tribIRPJ = recebimentosMes * (obra.aliquotas.IRPJ / 100);
+            const tribCSLL = recebimentosMes * (obra.aliquotas.CSLL / 100);
+
+            // TIPO DIFERIDO
+            const tipoDiferido = adiantamentoClientes > recebimentosTotaisAtual ? 'passivo' : 'ativo';
+
+            // TRIBUTOS DIFERIDOS
+            const difPIS = (receitaPOCAcumulada * (obra.aliquotas.PIS / 100)) - (recebimentosTotaisAtual * (obra.aliquotas.PIS / 100));
+            const difCOFINS = (receitaPOCAcumulada * (obra.aliquotas.COFINS / 100)) - (recebimentosTotaisAtual * (obra.aliquotas.COFINS / 100));
+            const difIRPJ = (receitaPOCAcumulada * (obra.aliquotas.IRPJ / 100)) - (recebimentosTotaisAtual * (obra.aliquotas.IRPJ / 100));
+            const difCSLL = (receitaPOCAcumulada * (obra.aliquotas.CSLL / 100)) - (recebimentosTotaisAtual * (obra.aliquotas.CSLL / 100));
+
+            // Contas contábeis
+            const contas = obra.contasContabeis || {
+                compras: '615', estoque: '616', receita: '2006', 
+                adiantamento: '6005', custo: '3015'
+            };
+
+            // Salvar cálculos
+            lanc.receitaPOCAcumulada = receitaPOCAcumulada;
+            lanc.receitaPOCMensal = receitaPOCMensal;
+            lanc.adiantamentoClientes = adiantamentoClientes;
+            lanc.recebimentosTotaisMes = recebimentosMes;
+            lanc.tributos = { PIS: tribPIS, COFINS: tribCOFINS, IRPJ: tribIRPJ, CSLL: tribCSLL };
+            lanc.diferidos = { 
+                PIS: difPIS, 
+                COFINS: difCOFINS, 
+                IRPJ: difIRPJ, 
+                CSLL: difCSLL,
+                tipo: tipoDiferido 
+            };
+            saveDB();
+
+            // ─── RATEIO PROPORCIONAL DE CUSTOS — lógica por unidade ─────────────────
+            //
+            // Para cada unidade, classificamos sua situação NESTE MÊS:
+            //
+            //   (A) ESTOQUE PURO: unidade ainda não vendida até este mês.
+            //       → Recebe sua parcela proporcional (m²) das compras do mês como incremento de estoque.
+            //       → Nada vai para custo.
+            //
+            //   (B) MÊS DA VENDA: competência da venda == mes atual.
+            //       → Todo o saldo de estoque acumulado desta unidade nos meses anteriores
+            //          + sua parcela das compras do mês corrente → vai para CUSTO (baixa do estoque).
+            //
+            //   (C) JÁ VENDIDA EM MÊS ANTERIOR: competência da venda < mes atual.
+            //       → Sua parcela das compras do mês corrente vai direto para CUSTO (já não é mais estoque).
+            //       → Saldo de estoque desta unidade já foi zerado no mês da venda.
+            //
+            // Rateio de compras por m² (custo/m² do mês)
+            const totalM2Obra = obra.unidades.reduce((s, u) => s + (u.m2 || 0), 0);
+            const comprasMes  = custoMensal;
+            const custoM2Mes  = totalM2Obra > 0 ? comprasMes / totalM2Obra : 0;
+
+            // Para cada unidade, calcular o saldo de estoque acumulado até o mês ANTERIOR
+            // = soma das parcelas de compras alocadas ao estoque desta unidade em todos os meses anteriores
+            // Uma unidade acumula estoque em todos os meses em que ainda NÃO estava vendida
+            function saldoEstoqueUnidadeAte(unidade, ateMesExclusive) {
+                let saldo = 0;
+                const mesesPassados = Object.keys(obra.lancamentos).filter(m => m < ateMesExclusive).sort();
+                mesesPassados.forEach(m => {
+                    const lm = obra.lancamentos[m];
+                    const comprasM = lm.custoMensal || 0;
+                    const totalM2M = totalM2Obra; // proporção constante por m²
+                    const custoM2M = totalM2M > 0 ? comprasM / totalM2M : 0;
+                    const parcela  = unidade.m2 * custoM2M;
+                    // Esta unidade era estoque nesse mês passado?
+                    const competVenda = unidade.vendida && unidade.dataVenda ? unidade.dataVenda.substring(0, 7) : null;
+                    const eraEstoque  = !competVenda || competVenda > m;
+                    if (eraEstoque) saldo += parcela;
+                });
+                return saldo;
+            }
+
+            let custoMesCalc       = 0; // total custo reconhecido (soma dos dois abaixo)
+            let custoCorrenteMes   = 0; // D 3015 / C 615 — parcela das compras do mês das unidades vendidas
+            let baixaEstoqueMes    = 0; // D 3015 / C 616 — saldo acumulado de estoque baixado no mês da venda
+            let comprasParaEstoque = 0; // D 616  / C 615 — parcela das compras das unidades em estoque
+
+            // Detalhamento por unidade para exibição
+            const detalheUnidades = obra.unidades.map(u => {
+                const parcela = u.m2 * custoM2Mes; // parcela das compras deste mês para esta unidade
+                const competVenda = u.vendida && u.dataVenda ? u.dataVenda.substring(0, 7) : null;
+
+                if (!competVenda || competVenda > mes) {
+                    // (A) ESTOQUE PURO — ainda não vendida neste mês
+                    comprasParaEstoque += parcela;
+                    return { nome: u.nome, tipo: 'estoque', parcela, saldoAnt: 0, custoReconhecido: 0 };
+
+                } else if (competVenda === mes) {
+                    // (B) MÊS DA VENDA — duas origens:
+                    //   • parcela das compras do mês   → D 3015 / C 615 (custo corrente)
+                    //   • saldo acumulado de estoque   → D 3015 / C 616 (baixa de estoque)
+                    const saldoAnt = saldoEstoqueUnidadeAte(u, mes);
+                    const custoReconhecido = saldoAnt + parcela;
+                    custoCorrenteMes += parcela;
+                    baixaEstoqueMes  += saldoAnt;
+                    custoMesCalc     += custoReconhecido;
+                    return { nome: u.nome, tipo: 'vendaMes', parcela, saldoAnt, custoReconhecido };
+
+                } else {
+                    // (C) JÁ VENDIDA EM MÊS ANTERIOR — parcela vai direto para custo corrente
+                    //   → D 3015 / C 615
+                    custoCorrenteMes += parcela;
+                    custoMesCalc     += parcela;
+                    return { nome: u.nome, tipo: 'vendaAnterior', parcela, saldoAnt: 0, custoReconhecido: parcela };
+                }
+            });
+
+            // m² para painel de rateio
+            const m2Vendido  = obra.unidades.filter(u => {
+                const cv = u.vendida && u.dataVenda ? u.dataVenda.substring(0, 7) : null;
+                return cv && cv <= mes;
+            }).reduce((s, u) => s + (u.m2 || 0), 0);
+            const m2Estoque  = totalM2Obra - m2Vendido;
+            const propVendido = totalM2Obra > 0 ? m2Vendido / totalM2Obra : 0;
+            const propEstoque = totalM2Obra > 0 ? m2Estoque / totalM2Obra : 0;
+
+            // Saldo total de estoque após este mês (para exibição)
+            const saldoEstoqueAnt = obra.unidades
+                .filter(u => { const cv = u.vendida && u.dataVenda ? u.dataVenda.substring(0,7) : null; return !cv || cv > mes; })
+                .reduce((s, u) => s + saldoEstoqueUnidadeAte(u, mes), 0);
+            const estoqueAtual = saldoEstoqueAnt + comprasParaEstoque;
+
+            // Salvar para uso nos meses seguintes
+            lanc._comprasParaEstoque = comprasParaEstoque;
+            lanc._saldoEstoque       = estoqueAtual;
+            lanc._custoMes           = custoMesCalc;
+            saveDB();
+            // ─────────────────────────────────────────────────────────────────────────
+
+            // Bloco POC só aparece quando há vendas; caso contrário mostra aviso informativo
+            const pocHtml = valorTotalVendido > 0 ? `
+                <div class="card">
+                    <h3>📊 Demonstrativo Contábil POC - ${formatMes(mes)}</h3>
+                    <div class="contabil-demo">
+                        <div class="contabil-row receita">
+                            <div>
+                                <strong style="font-size: 1.1em;">RECEITA POC ACUMULADA</strong><br>
+                                <small style="color: #666;">
+                                    Custo Acumulado (${formatMoney(custoAcumuladoAtual)}) / Custo Orçado (${formatMoney(obra.custoOrcado)}) × Valor Venda (${formatMoney(valorTotalVendido)})
+                                    ${percentualExecutado >= 100 ? '<br><span style="color: #28a745;">✓ Limite de 100% atingido</span>' : ''}
+                                </small>
+                            </div>
+                            <div class="contabil-valor" style="color: #667eea;">${formatMoney(receitaPOCAcumulada)}</div>
+                            <div class="contabil-label">Acumulado</div>
+                        </div>
+                        <div class="contabil-row receita" style="background: rgba(102,126,234,0.15);">
+                            <div>
+                                <strong style="font-size: 1.1em;">RECEITA POC DO MÊS</strong><br>
+                                <small style="color: #666;">Acumulado Atual - Acumulado Anterior</small>
+                            </div>
+                            <div class="contabil-valor" style="color: #667eea; font-size: 1.3em;">${formatMoney(receitaPOCMensal)}</div>
+                            <div class="contabil-label">Crédito Receita</div>
+                        </div>
+                        <div class="contabil-row estoque">
+                            <div>
+                                <strong style="font-size: 1.1em;">ADIANTAMENTO CLIENTES (PNC)</strong><br>
+                                <small style="color: #666;">Valor Venda (${formatMoney(valorTotalVendido)}) - Receita POC Acumulada (${formatMoney(receitaPOCAcumulada)})</small>
+                            </div>
+                            <div class="contabil-valor" style="color: #6c757d;">${formatMoney(adiantamentoClientes)}</div>
+                            <div class="contabil-label">Passivo Não Circulante</div>
+                        </div>
+                    </div>
+                </div>` : `
+                <div class="alert alert-info" style="margin-bottom:0;">
+                    ℹ️ <strong>Mês sem vendas reconhecidas.</strong>
+                    As compras deste mês vão integralmente para o <strong>Estoque de Unidades Imobiliárias (${contas.estoque})</strong>.
+                    O reconhecimento de receita (POC) e custo ocorrerá a partir da competência das vendas.
+                </div>`;
+
+            let html = `
+                ${avisoSemData}
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <h4>Custo Orçado Total</h4>
+                        <div class="value">${formatMoney(obra.custoOrcado)}</div>
+                    </div>
+                    <div class="summary-card green">
+                        <h4>Custo Acumulado</h4>
+                        <div class="value">${formatMoney(custoAcumuladoAtual)}</div>
+                    </div>
+                    <div class="summary-card orange">
+                        <h4>% Executado</h4>
+                        <div class="value">${percentualExecutado.toFixed(2)}%</div>
+                    </div>
+                    <div class="summary-card purple">
+                        <h4>Valor Vendido</h4>
+                        <div class="value">${formatMoney(valorTotalVendido)}</div>
+                    </div>
+                    <div class="summary-card dark">
+                        <h4>Adiantamento Clientes</h4>
+                        <div class="value">${formatMoney(adiantamentoClientes)}</div>
+                    </div>
+                </div>
+
+                <div style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 13px;">
+                    <strong>⚖️ Rateio Proporcional de Custos por Unidade — ${formatMes(mes)}</strong>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 10px 0;">
+                        <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #28a745;">
+                            <div style="font-weight: 600; color: #28a745;">🏠 Vendidas (≤ competência)</div>
+                            <div>${m2Vendido.toFixed(2)} m² — <strong>${(propVendido*100).toFixed(1)}%</strong></div>
+                            <div style="color:#555;">→ Custo: <strong>${formatMoney(custoMesCalc)}</strong></div>
+                        </div>
+                        <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #ffc107;">
+                            <div style="font-weight: 600; color: #856404;">📦 Estoque (não vendidas)</div>
+                            <div>${m2Estoque.toFixed(2)} m² — <strong>${(propEstoque*100).toFixed(1)}%</strong></div>
+                            <div style="color:#555;">→ Estoque: <strong>${formatMoney(comprasParaEstoque)}</strong></div>
+                        </div>
+                        <div style="background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #667eea;">
+                            <div style="font-weight: 600; color: #667eea;">🏗️ Compras do Mês</div>
+                            <div>${totalM2Obra.toFixed(2)} m² total | R$/m²: ${formatMoney(custoM2Mes)}</div>
+                            <div style="color:#555;">Total: <strong>${formatMoney(comprasMes)}</strong></div>
+                        </div>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; margin-top:8px;">
+                        <thead>
+                            <tr style="background:#495057; color:white;">
+                                <th style="padding:6px; text-align:left;">Unidade</th>
+                                <th style="padding:6px; text-align:center;">m²</th>
+                                <th style="padding:6px; text-align:center;">Situação</th>
+                                <th style="padding:6px; text-align:right;">Parcela Compras</th>
+                                <th style="padding:6px; text-align:right;">Saldo Est. Ant.</th>
+                                <th style="padding:6px; text-align:right;">→ Estoque</th>
+                                <th style="padding:6px; text-align:right;">→ Custo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${detalheUnidades.map(d => `
+                                <tr style="border-bottom:1px solid #dee2e6; background:${d.tipo==='estoque'?'#fffbf0':d.tipo==='vendaMes'?'#f0fff4':'#f8f9fa'}">
+                                    <td style="padding:5px 6px; font-weight:600;">${d.nome}</td>
+                                    <td style="padding:5px 6px; text-align:center;">${obra.unidades.find(u=>u.nome===d.nome)?.m2?.toFixed(2)||''}</td>
+                                    <td style="padding:5px 6px; text-align:center;">
+                                        ${d.tipo==='estoque'?'<span style="color:#856404;">📦 Estoque</span>':
+                                          d.tipo==='vendaMes'?'<span style="color:#28a745;font-weight:700;">🔔 Venda este mês</span>':
+                                          '<span style="color:#667eea;">✅ Já vendida</span>'}
+                                    </td>
+                                    <td style="padding:5px 6px; text-align:right;">${formatMoney(d.parcela)}</td>
+                                    <td style="padding:5px 6px; text-align:right;">${d.saldoAnt>0?formatMoney(d.saldoAnt):'-'}</td>
+                                    <td style="padding:5px 6px; text-align:right; color:#856404;">${d.tipo==='estoque'?formatMoney(d.parcela):'-'}</td>
+                                    <td style="padding:5px 6px; text-align:right; color:#dc3545; font-weight:600;">${d.custoReconhecido>0?formatMoney(d.custoReconhecido):'-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                        <tfoot>
+                            <tr style="background:#e9ecef; font-weight:700;">
+                                <td colspan="5" style="padding:6px;">TOTAIS</td>
+                                <td style="padding:6px; text-align:right; color:#856404;">${formatMoney(comprasParaEstoque)}</td>
+                                <td style="padding:6px; text-align:right; color:#dc3545;">${formatMoney(custoMesCalc)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <h3>💰 Lançamento de Custos - ${formatMes(mes)}</h3>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label><strong>Custo Incorrido no Mês (R$)</strong></label>
+                            <input type="number" id="custoMensal" value="${custoMensal}" step="0.01" 
+                                   onchange="salvarCustoMensal('${mes}')" 
+                                   style="font-size: 1.4em; font-weight: bold; color: #667eea; padding: 15px;">
+                        </div>
+                        <div class="form-group">
+                            <label>Custo Acumulado até ${formatMes(mes)}</label>
+                            <input type="text" value="${formatMoney(custoAcumuladoAtual)}" readonly style="background: #e9ecef; font-size: 1.2em; font-weight: bold;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>💵 Recebimentos por Unidade - ${formatMes(mes)}</h3>
+                    ${vendidas.length === 0 ? 
+                        '<div class="alert alert-warning">Nenhuma unidade vendida. Cadastre as vendas na aba "Vendas" primeiro.</div>' : 
+                        `<table>
+                            <thead>
+                                <tr>
+                                    <th>Unidade</th>
+                                    <th>Cliente</th>
+                                    <th>Valor Venda</th>
+                                    <th>Recebido Este Mês</th>
+                                    <th>Total Recebido Acumulado</th>
+                                    <th>Saldo a Receber</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${vendidas.map(u => {
+                                    const recebidoMes = lanc.recebimentosPorUnidade?.[u.id] || 0;
+                                    let recebidoTotal = 0;
+                                    mesesAnteriores.concat([mes]).forEach(m => {
+                                        recebidoTotal += obra.lancamentos[m].recebimentosPorUnidade?.[u.id] || 0;
+                                    });
+                                    const saldo = (u.valorVenda || 0) - recebidoTotal;
+                                    return `
+                                        <tr>
+                                            <td><strong>${u.nome}</strong></td>
+                                            <td>${u.cliente || '-'}</td>
+                                            <td class="text-right">${formatMoney(u.valorVenda)}</td>
+                                            <td>
+                                                <input type="number" value="${recebidoMes}" step="0.01" 
+                                                       onchange="salvarRecebimento('${mes}', ${u.id}, this.value)"
+                                                       style="width: 150px; text-align: right; font-weight: 600; padding: 8px;">
+                                            </td>
+                                            <td class="text-right" style="font-weight: 600; ${recebidoTotal > 0 ? 'color: #28a745;' : ''}">${formatMoney(recebidoTotal)}</td>
+                                            <td class="text-right" style="color: ${saldo > 0 ? '#dc3545' : '#28a745'}; font-weight: 600;">${formatMoney(saldo)}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                            <tfoot style="background: #667eea; color: white; font-weight: bold;">
+                                <tr>
+                                    <td colspan="3">TOTAIS DO MÊS</td>
+                                    <td class="text-right">${formatMoney(recebimentosMes)}</td>
+                                    <td class="text-right">${formatMoney(recebimentosTotaisAtual)}</td>
+                                    <td class="text-right">${formatMoney(valorTotalVendido - recebimentosTotaisAtual)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>`
+                    }
+                </div>
+
+                ${pocHtml}
+
+                <div class="card">
+                    <h3>📒 Lançamentos Contábeis - ${formatMes(mes)}</h3>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 13px;">
+                        Lançamentos contábeis automáticos baseados nos valores calculados e nas contas configuradas no cadastro da obra.
+                    </p>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 10px; color: #495057; font-size: 14px;">📋 Plano de Contas Configurado</h4>
+                        <div class="grid-5" style="font-size: 12px;">
+                            <div><strong>Compras Mensal:</strong> ${contas.compras}</div>
+                            <div><strong>Estoque:</strong> ${contas.estoque}</div>
+                            <div><strong>Receita Mensal:</strong> ${contas.receita}</div>
+                            <div><strong>Adiantamentos:</strong> ${contas.adiantamento}</div>
+                            <div><strong>Custo Obra:</strong> ${contas.custo}</div>
+                        </div>
+                    </div>
+
+                    <table class="lancamento-contabil-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 35%;">DESCRIÇÃO</th>
+                                <th style="width: 20%;">DÉBITO</th>
+                                <th style="width: 20%;">CRÉDITO</th>
+                                <th style="width: 25%;">VALOR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: #fff8e1;">
+                                <td colspan="4" style="font-weight: 700; color: #495057; padding: 10px 10px 4px; font-size: 13px; border-bottom: none;">
+                                    📌 Lançamento 1 — Compras do Mês → Estoque
+                                </td>
+                            </tr>
+                            <tr style="background: #fff8e1;">
+                                <td style="text-align: left; color: #666; font-size: 12px; padding: 3px 10px; border-bottom: none;">
+                                    Estoque de Unidades Imobiliárias — parcela das compras das unidades não vendidas<br>
+                                    <small>${(propEstoque*100).toFixed(1)}% não vendido × Compras ${formatMoney(comprasMes)}</small>
+                                </td>
+                                <td style="font-weight: 700; color: #856404; border-bottom: none;">${contas.estoque}</td>
+                                <td style="border-bottom: none;"></td>
+                                <td style="text-align: right; font-weight: bold; color: #856404; border-bottom: none;">${formatMoney(comprasParaEstoque)}</td>
+                            </tr>
+                            ${custoCorrenteMes > 0 ? `
+                            <tr style="background: #fff8e1;">
+                                <td style="text-align: left; color: #666; font-size: 12px; padding: 3px 10px; border-bottom: none;">
+                                    Custo Mensal — parcela das compras das unidades vendidas (corrente)<br>
+                                    <small>${(propVendido*100).toFixed(1)}% vendido × Compras ${formatMoney(comprasMes)}</small>
+                                </td>
+                                <td style="font-weight: 700; color: #dc3545; border-bottom: none;">${contas.custo}</td>
+                                <td style="border-bottom: none;"></td>
+                                <td style="text-align: right; font-weight: bold; color: #dc3545; border-bottom: none;">${formatMoney(custoCorrenteMes)}</td>
+                            </tr>` : ''}
+                            <tr style="background: #fff8e1;">
+                                <td style="text-align: left; color: #666; font-size: 12px; padding: 3px 10px;">
+                                    Compras Mensais — total do custo incorrido no mês
+                                </td>
+                                <td></td>
+                                <td style="font-weight: 700; color: #555;">${contas.compras}</td>
+                                <td style="text-align: right; font-weight: bold;">${formatMoney(custoMensal)}</td>
+                            </tr>
+                            ${baixaEstoqueMes > 0 ? `
+                            <tr style="background: #f0fff4;">
+                                <td colspan="4" style="font-weight: 700; color: #495057; padding: 10px 10px 4px; font-size: 13px; border-bottom: none;">
+                                    📌 Lançamento 2 — Baixa de Estoque das Unidades Vendidas no Mês
+                                </td>
+                            </tr>
+                            <tr style="background: #f0fff4;">
+                                <td style="text-align: left; color: #666; font-size: 12px; padding: 3px 10px; border-bottom: none;">
+                                    Custo Mensal — saldo de estoque acumulado baixado na competência da venda<br>
+                                    <small>Saldo acumulado das unidades com venda em ${formatMes(mes)}</small>
+                                </td>
+                                <td style="font-weight: 700; color: #dc3545; border-bottom: none;">${contas.custo}</td>
+                                <td style="border-bottom: none;"></td>
+                                <td style="text-align: right; font-weight: bold; color: #dc3545; border-bottom: none;">${formatMoney(baixaEstoqueMes)}</td>
+                            </tr>
+                            <tr style="background: #f0fff4;">
+                                <td style="text-align: left; color: #666; font-size: 12px; padding: 3px 10px;">
+                                    Estoque de Unidades Imobiliárias — baixa do ativo estoque
+                                </td>
+                                <td></td>
+                                <td style="font-weight: 700; color: #856404;">${contas.estoque}</td>
+                                <td style="text-align: right; font-weight: bold; color: #856404;">${formatMoney(baixaEstoqueMes)}</td>
+                            </tr>` : ''}
+                            ${valorTotalVendido > 0 ? `
+                            <tr>
+                                <td colspan="4" style="font-weight: 700; color: #495057; padding: 10px 10px 4px; font-size: 13px; border-bottom: none;">
+                                    📌 Lançamento ${baixaEstoqueMes > 0 ? '3' : '2'} — Receita POC
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left; color: #666; font-size: 12px; padding: 3px 10px; border-bottom: none;">
+                                    Reconhecimento de receita pelo método POC
+                                </td>
+                                <td style="font-weight: 700; color: #555; border-bottom: none;">${contas.adiantamento}</td>
+                                <td style="border-bottom: none;"></td>
+                                <td style="text-align: right; font-weight: bold; border-bottom: none;">${formatMoney(receitaPOCMensal)}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: left; color: #666; font-size: 12px; padding: 3px 10px;">
+                                    Receita de Vendas POC
+                                </td>
+                                <td></td>
+                                <td style="font-weight: 700; color: #28a745;">${contas.receita}</td>
+                                <td style="text-align: right; font-weight: bold; color: #28a745;">${formatMoney(receitaPOCMensal)}</td>
+                            </tr>` : ''}
+                        </tbody>
+                        <tfoot>
+                            <tr style="background: #343a40; color: white; font-weight: 700; font-size: 13px;">
+                                <td style="padding: 10px;">TOTAL DÉBITOS</td>
+                                <td colspan="2" style="padding: 10px; text-align: center;">= TOTAL CRÉDITOS</td>
+                                <td style="text-align: right; padding: 10px;">${formatMoney(comprasParaEstoque + custoCorrenteMes + baixaEstoqueMes + receitaPOCMensal)}</td>
+                            </tr>
+                            <tr style="background: #f8f9fa; font-size: 11px; color: #666;">
+                                <td colspan="4" style="padding: 8px 10px;">
+                                    ✓ D ${contas.estoque}: ${formatMoney(comprasParaEstoque)} &nbsp;|&nbsp;
+                                    ${custoCorrenteMes > 0 ? `✓ D ${contas.custo} (corrente): ${formatMoney(custoCorrenteMes)} &nbsp;|&nbsp;` : ''}
+                                    ${baixaEstoqueMes > 0 ? `✓ D ${contas.custo} (baixa est.): ${formatMoney(baixaEstoqueMes)} &nbsp;|&nbsp;` : ''}
+                                    ${receitaPOCMensal > 0 ? `✓ D ${contas.adiantamento}: ${formatMoney(receitaPOCMensal)} &nbsp;|&nbsp;` : ''}
+                                    ✓ C ${contas.compras}: ${formatMoney(custoMensal)}
+                                    ${baixaEstoqueMes > 0 ? `&nbsp;|&nbsp; ✓ C ${contas.estoque} (baixa): ${formatMoney(baixaEstoqueMes)}` : ''}
+                                    ${receitaPOCMensal > 0 ? `&nbsp;|&nbsp; ✓ C ${contas.receita}: ${formatMoney(receitaPOCMensal)}` : ''}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 8px; font-size: 12px; color: #666;">
+                        <strong>Lançamento 1 — Compras do Mês:</strong><br>
+                        &nbsp;&nbsp;Débito ${contas.estoque} (Estoque): ${formatMoney(comprasParaEstoque)} — parcela das compras alocada às unidades ainda não vendidas<br>
+                        ${custoCorrenteMes > 0 ? `&nbsp;&nbsp;Débito ${contas.custo} (Custo Mensal): ${formatMoney(custoCorrenteMes)} — parcela das compras alocada às unidades vendidas<br>` : ''}
+                        &nbsp;&nbsp;Crédito ${contas.compras} (Compras Mensais): ${formatMoney(custoMensal)} — total das compras/custos incorridos no mês
+                        ${baixaEstoqueMes > 0 ? `<br><br>
+                        <strong>Lançamento 2 — Baixa de Estoque (venda ocorrida neste mês):</strong><br>
+                        &nbsp;&nbsp;Débito ${contas.custo} (Custo Mensal): ${formatMoney(baixaEstoqueMes)} — saldo acumulado de estoque das unidades vendidas em ${formatMes(mes)}<br>
+                        &nbsp;&nbsp;Crédito ${contas.estoque} (Estoque): ${formatMoney(baixaEstoqueMes)} — baixa do ativo estoque dessas unidades` : ''}
+                        ${valorTotalVendido > 0 ? `<br><br>
+                        <strong>Lançamento ${baixaEstoqueMes > 0 ? '3' : '2'} — Receita POC:</strong><br>
+                        &nbsp;&nbsp;Débito ${contas.adiantamento} (Adiantamento de Clientes): ${formatMoney(receitaPOCMensal)} — baixa do passivo de adiantamento<br>
+                        &nbsp;&nbsp;Crédito ${contas.receita} (Receita de Vendas): ${formatMoney(receitaPOCMensal)} — reconhecimento da receita pelo percentual de conclusão` : ''}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>💰 Tributos sobre Recebimentos - ${formatMes(mes)}</h3>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 13px;">
+                        Cálculo: Valores Recebidos no Mês × Alíquota
+                    </p>
+                    <div class="contabil-demo">
+                        <div class="contabil-row tributo">
+                            <div>
+                                <strong>PIS (${obra.aliquotas.PIS}%)</strong><br>
+                                <small>${formatMoney(recebimentosMes)} × ${obra.aliquotas.PIS}%</small>
+                            </div>
+                            <div class="contabil-valor" style="color: #dc3545;">${formatMoney(tribPIS)}</div>
+                            <div class="contabil-label">Débito PIS a Pagar</div>
+                        </div>
+                        <div class="contabil-row tributo">
+                            <div>
+                                <strong>COFINS (${obra.aliquotas.COFINS}%)</strong><br>
+                                <small>${formatMoney(recebimentosMes)} × ${obra.aliquotas.COFINS}%</small>
+                            </div>
+                            <div class="contabil-valor" style="color: #dc3545;">${formatMoney(tribCOFINS)}</div>
+                            <div class="contabil-label">Débito COFINS a Pagar</div>
+                        </div>
+                        <div class="contabil-row tributo">
+                            <div>
+                                <strong>IRPJ (${obra.aliquotas.IRPJ}%)</strong><br>
+                                <small>${formatMoney(recebimentosMes)} × ${obra.aliquotas.IRPJ}%</small>
+                            </div>
+                            <div class="contabil-valor" style="color: #dc3545;">${formatMoney(tribIRPJ)}</div>
+                            <div class="contabil-label">Débito IRPJ a Pagar</div>
+                        </div>
+                        <div class="contabil-row tributo">
+                            <div>
+                                <strong>CSLL (${obra.aliquotas.CSLL}%)</strong><br>
+                                <small>${formatMoney(recebimentosMes)} × ${obra.aliquotas.CSLL}%</small>
+                            </div>
+                            <div class="contabil-valor" style="color: #dc3545;">${formatMoney(tribCSLL)}</div>
+                            <div class="contabil-label">Débito CSLL a Pagar</div>
+                        </div>
+                        <div class="contabil-row" style="background: #dc3545; color: white; font-weight: bold;">
+                            <div>TOTAL TRIBUTOS DO MÊS</div>
+                            <div class="contabil-valor">${formatMoney(tribPIS + tribCOFINS + tribIRPJ + tribCSLL)}</div>
+                            <div class="contabil-label">Total a Pagar</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📑 Tributos Diferidos - Controle Patrimonial</h3>
+                    ${tipoDiferido === 'passivo' ? 
+                        `<div class="passivo-alert">
+                            ⚠️ SALDO EM PASSIVO NÃO CIRCULANTE<br>
+                            <small style="font-weight: normal;">
+                                Adiantamento Clientes POC (${formatMoney(adiantamentoClientes)}) > Recebimentos Totais (${formatMoney(recebimentosTotaisAtual)})<br>
+                                <em>Há mais valores a reconhecer no futuro do que já recebemos.</em>
+                            </small>
+                        </div>` : 
+                        `<div class="ativo-alert">
+                            ✅ SALDO EM ATIVO NÃO CIRCULANTE<br>
+                            <small style="font-weight: normal;">
+                                Adiantamento Clientes POC (${formatMoney(adiantamentoClientes)}) ≤ Recebimentos Totais (${formatMoney(recebimentosTotaisAtual)})<br>
+                                <em>Já recebemos valores equivalentes ou superiores ao adiantamento.</em>
+                            </small>
+                        </div>`
+                    }
+
+                    <p style="margin: 15px 0; color: #666; font-size: 13px;">
+                        <strong>Fórmulas:</strong><br>
+                        PIS Diferido = (Receita POC Acumulada × Alíquota PIS) - (Recebimentos Totais × Alíquota PIS)<br>
+                        COFINS Diferido = (Receita POC Acumulada × Alíquota COFINS) - (Recebimentos Totais × Alíquota COFINS)<br>
+                        IRPJ Diferido = (Receita POC Acumulada × Alíquota IRPJ) - (Recebimentos Totais × Alíquota IRPJ)<br>
+                        CSLL Diferido = (Receita POC Acumulada × Alíquota CSLL) - (Recebimentos Totais × Alíquota CSLL)
+                    </p>
+
+                    <div class="contabil-demo">
+                        <div class="contabil-row diferido">
+                            <div>
+                                <strong>PIS DIFERIDO</strong><br>
+                                <small style="font-size: 11px;">
+                                    (${formatMoney(receitaPOCAcumulada)} × ${obra.aliquotas.PIS}%) - (${formatMoney(recebimentosTotaisAtual)} × ${obra.aliquotas.PIS}%)
+                                </small>
+                            </div>
+                            <div class="contabil-valor" style="color: ${difPIS >= 0 ? '#28a745' : '#dc3545'};">${formatMoney(Math.abs(difPIS))}</div>
+                            <div class="contabil-label">${difPIS >= 0 ? 'Ativo' : 'Passivo'} Não Circulante</div>
+                        </div>
+                        <div class="contabil-row diferido">
+                            <div>
+                                <strong>COFINS DIFERIDO</strong><br>
+                                <small style="font-size: 11px;">
+                                    (${formatMoney(receitaPOCAcumulada)} × ${obra.aliquotas.COFINS}%) - (${formatMoney(recebimentosTotaisAtual)} × ${obra.aliquotas.COFINS}%)
+                                </small>
+                            </div>
+                            <div class="contabil-valor" style="color: ${difCOFINS >= 0 ? '#28a745' : '#dc3545'};">${formatMoney(Math.abs(difCOFINS))}</div>
+                            <div class="contabil-label">${difCOFINS >= 0 ? 'Ativo' : 'Passivo'} Não Circulante</div>
+                        </div>
+                        <div class="contabil-row diferido">
+                            <div>
+                                <strong>IRPJ DIFERIDO</strong><br>
+                                <small style="font-size: 11px;">
+                                    (${formatMoney(receitaPOCAcumulada)} × ${obra.aliquotas.IRPJ}%) - (${formatMoney(recebimentosTotaisAtual)} × ${obra.aliquotas.IRPJ}%)
+                                </small>
+                            </div>
+                            <div class="contabil-valor" style="color: ${difIRPJ >= 0 ? '#28a745' : '#dc3545'};">${formatMoney(Math.abs(difIRPJ))}</div>
+                            <div class="contabil-label">${difIRPJ >= 0 ? 'Ativo' : 'Passivo'} Não Circulante</div>
+                        </div>
+                        <div class="contabil-row diferido">
+                            <div>
+                                <strong>CSLL DIFERIDO</strong><br>
+                                <small style="font-size: 11px;">
+                                    (${formatMoney(receitaPOCAcumulada)} × ${obra.aliquotas.CSLL}%) - (${formatMoney(recebimentosTotaisAtual)} × ${obra.aliquotas.CSLL}%)
+                                </small>
+                            </div>
+                            <div class="contabil-valor" style="color: ${difCSLL >= 0 ? '#28a745' : '#dc3545'};">${formatMoney(Math.abs(difCSLL))}</div>
+                            <div class="contabil-label">${difCSLL >= 0 ? 'Ativo' : 'Passivo'} Não Circulante</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 13px; color: #666;">
+                        <strong>Regra Contábil:</strong><br>
+                        • Se <strong>Adiantamento Clientes POC > Recebimentos Totais</strong> → Saldo em <span style="color: #dc3545; font-weight: bold;">PASSIVO NÃO CIRCULANTE</span> (Diferimento)<br>
+                        • Se <strong>Adiantamento Clientes POC ≤ Recebimentos Totais</strong> → Saldo em <span style="color: #28a745; font-weight: bold;">ATIVO NÃO CIRCULANTE</span> (Antecipação)<br>
+                        <br>
+                        <strong>Legenda:</strong><br>
+                        • <span style="color: #28a745;">Valor Positivo (Verde)</span> = Saldo em Ativo Não Circulante<br>
+                        • <span style="color: #dc3545;">Valor Negativo (Vermelho)</span> = Saldo em Passivo Não Circulante
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('lancamentoForm').innerHTML = html;
+        }
+
+        function salvarCustoMensal(mes) {
+            const obra = getObraAtual();
+            obra.lancamentos[mes].custoMensal = parseFloat(document.getElementById('custoMensal').value) || 0;
+            saveDB();
+            abrirMes(mes);
+        }
+
+        function salvarRecebimento(mes, unidadeId, valor) {
+            const obra = getObraAtual();
+            if (!obra.lancamentos[mes].recebimentosPorUnidade) obra.lancamentos[mes].recebimentosPorUnidade = {};
+            obra.lancamentos[mes].recebimentosPorUnidade[unidadeId] = parseFloat(valor) || 0;
+
+            let totalRecebido = 0;
+            Object.keys(obra.lancamentos).forEach(m => {
+                totalRecebido += obra.lancamentos[m].recebimentosPorUnidade?.[unidadeId] || 0;
+            });
+            const unidade = obra.unidades.find(u => u.id === unidadeId);
+            if (unidade) unidade.valorRecebidoTotal = totalRecebido;
+
+            saveDB();
+            abrirMes(mes);
+        }
+
+        // ===== RELATÓRIOS =====
+        function renderRelatorio() {
+            const obra = getObraAtual();
+            if (!obra) return document.getElementById('relatorioContent').innerHTML = '<div class="alert alert-warning">Selecione uma obra na aba "Obras" primeiro.</div>';
+
+            const meses = Object.keys(obra.lancamentos).sort();
+            const contas = obra.contasContabeis || { compras:'615', estoque:'616', receita:'2006', adiantamento:'6005', custo:'3015' };
+            const totalM2Obra = obra.unidades.reduce((s, u) => s + (u.m2 || 0), 0);
+
+            // ── Acumular dados por mês ───────────────────────────────────────────────
+            let custoAcum = 0, recebAcum = 0;
+            const linhas = meses.map(m => {
+                const lanc = obra.lancamentos[m];
+
+                // vendidas na competência deste mês
+                const vendidasM = obra.unidades.filter(u => {
+                    if (!u.vendida || !u.dataVenda) return false;
+                    return u.dataVenda.substring(0,7) <= m;
+                });
+                const valorVendidoM = vendidasM.reduce((s,u) => s + (u.valorVenda||0), 0);
+
+                // rateio custo (recalcula para ter custoCorrente e baixaEstoque)
+                const custoM2Mes = totalM2Obra > 0 ? (lanc.custoMensal||0) / totalM2Obra : 0;
+                let custoCorrenteM = 0, baixaEstoqueM = 0, comprasEstoqueM = 0;
+                obra.unidades.forEach(u => {
+                    const parcela = u.m2 * custoM2Mes;
+                    const cv = u.vendida && u.dataVenda ? u.dataVenda.substring(0,7) : null;
+                    if (!cv || cv > m) {
+                        comprasEstoqueM += parcela;
+                    } else if (cv === m) {
+                        // saldo estoque acumulado até mês anterior desta unidade
+                        let saldoAnt = 0;
+                        meses.filter(x => x < m).forEach(mp => {
+                            const lmp = obra.lancamentos[mp];
+                            const cm2p = totalM2Obra > 0 ? (lmp.custoMensal||0)/totalM2Obra : 0;
+                            const cvp = u.vendida && u.dataVenda ? u.dataVenda.substring(0,7) : null;
+                            if (!cvp || cvp > mp) saldoAnt += u.m2 * cm2p;
+                        });
+                        baixaEstoqueM  += saldoAnt;
+                        custoCorrenteM += parcela;
+                    } else {
+                        custoCorrenteM += parcela;
+                    }
+                });
+                const custoTotalM = custoCorrenteM + baixaEstoqueM;
+
+                // acumulados
+                custoAcum += (lanc.custoMensal || 0);
+                const recebMes = lanc.recebimentosTotaisMes || 0;
+                recebAcum += recebMes;
+
+                const pocPerc = obra.custoOrcado > 0 ? Math.min(custoAcum / obra.custoOrcado * 100, 100) : 0;
+                const recPOCAcum = lanc.receitaPOCAcumulada || 0;
+                const recPOCMes  = lanc.receitaPOCMensal || 0;
+                const adiantamento = lanc.adiantamentoClientes || 0;
+
+                // estoque acumulado = soma das comprasParaEstoque salvas
+                const estoqueAcum = lanc._saldoEstoque || 0;
+
+                // tributos
+                const trib = lanc.tributos || {};
+                const tribTotal = (trib.PIS||0)+(trib.COFINS||0)+(trib.IRPJ||0)+(trib.CSLL||0);
+
+                // diferidos
+                const dif = lanc.diferidos || {};
+                const difTotal = (dif.PIS||0)+(dif.COFINS||0)+(dif.IRPJ||0)+(dif.CSLL||0);
+
+                // margem bruta = receita POC mensal - custo reconhecido mensal
+                const margemBruta = recPOCMes - custoTotalM;
+                const margemPerc  = recPOCMes > 0 ? (margemBruta / recPOCMes * 100) : 0;
+
+                return { m, lanc, valorVendidoM, custoCorrenteM, baixaEstoqueM, custoTotalM,
+                         comprasEstoqueM, estoqueAcum, custoAcum, recebMes, recebAcum,
+                         pocPerc, recPOCAcum, recPOCMes, adiantamento, tribTotal, difTotal,
+                         margemBruta, margemPerc, dif };
+            });
+
+            // ── Totais gerais ────────────────────────────────────────────────────────
+            const ult = linhas.length > 0 ? linhas[linhas.length-1] : null;
+            const totalCompras   = meses.reduce((s,m) => s+(obra.lancamentos[m].custoMensal||0), 0);
+            const totalRecPOC    = linhas.reduce((s,r) => s+r.recPOCMes, 0);
+            const totalCustoRec  = linhas.reduce((s,r) => s+r.custoTotalM, 0);
+            const totalReceb     = linhas.reduce((s,r) => s+r.recebMes, 0);
+            const totalTrib      = linhas.reduce((s,r) => s+r.tribTotal, 0);
+            const totalMargem    = totalRecPOC - totalCustoRec;
+            const totalMargemPct = totalRecPOC > 0 ? totalMargem/totalRecPOC*100 : 0;
+            const vendidasAll    = obra.unidades.filter(u => u.vendida);
+            const valorVendidoTotal = vendidasAll.reduce((s,u) => s+(u.valorVenda||0), 0);
+
+            // ── KPI cards ────────────────────────────────────────────────────────────
+            const kpiHtml = `
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:24px;">
+                    ${[
+                        { label:'Custo Orçado Total',    val: formatMoney(obra.custoOrcado),         cor:'#667eea', icon:'🏗️' },
+                        { label:'Compras Acumuladas',    val: formatMoney(totalCompras),              cor:'#f5576c', icon:'🛒' },
+                        { label:'Estoque Atual (616)',   val: formatMoney(ult?.estoqueAcum||0),       cor:'#f7971e', icon:'📦' },
+                        { label:'% Conclusão (POC)',     val: (ult?.pocPerc||0).toFixed(2)+'%',       cor:'#11998e', icon:'⚙️' },
+                        { label:'Valor Total Vendido',   val: formatMoney(valorVendidoTotal),         cor:'#a855f7', icon:'🏠' },
+                        { label:'Receita POC Acumulada', val: formatMoney(ult?.recPOCAcum||0),        cor:'#4facfe', icon:'📊' },
+                        { label:'Recebimentos Acum.',   val: formatMoney(totalReceb),                cor:'#38ef7d', icon:'💰' },
+                        { label:'Tributos Recolhidos',  val: formatMoney(totalTrib),                 cor:'#eb3349', icon:'📋' },
+                        { label:'Margem Bruta Acum.',   val: formatMoney(totalMargem),               cor: totalMargem>=0?'#11998e':'#eb3349', icon:'📈' },
+                    ].map(k => `
+                        <div style="background:white;border-radius:10px;padding:16px;border-top:4px solid ${k.cor};box-shadow:0 2px 8px rgba(0,0,0,0.07);">
+                            <div style="font-size:22px;margin-bottom:4px;">${k.icon}</div>
+                            <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">${k.label}</div>
+                            <div style="font-size:16px;font-weight:800;color:${k.cor};">${k.val}</div>
+                        </div>
+                    `).join('')}
+                </div>`;
+
+            // ── Tabela mensal ────────────────────────────────────────────────────────
+            const thStyle = 'padding:8px 10px;white-space:nowrap;font-size:11px;';
+            const tdR = (v, color='', bold=false) =>
+                `<td style="text-align:right;padding:6px 10px;font-size:12px;${color?'color:'+color+';':''}${bold?'font-weight:700;':''}">${v}</td>`;
+            const tdC = (v, color='') =>
+                `<td style="text-align:center;padding:6px 10px;font-size:12px;${color?'color:'+color+';':''}">${v}</td>`;
+
+            const tabelaHtml = `
+                <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                    <thead>
+                        <tr style="background:#343a40;color:white;">
+                            <th rowspan="2" style="${thStyle}text-align:left;">Mês</th>
+                            <th colspan="3" style="${thStyle}text-align:center;border-left:2px solid #555;">CUSTOS</th>
+                            <th colspan="2" style="${thStyle}text-align:center;border-left:2px solid #555;">ESTOQUE (${contas.estoque})</th>
+                            <th colspan="4" style="${thStyle}text-align:center;border-left:2px solid #555;">POC / RECEITA</th>
+                            <th colspan="3" style="${thStyle}text-align:center;border-left:2px solid #555;">CAIXA / TRIBUTOS</th>
+                            <th colspan="2" style="${thStyle}text-align:center;border-left:2px solid #555;">RESULTADO</th>
+                        </tr>
+                        <tr style="background:#495057;color:#ddd;">
+                            <th style="${thStyle}text-align:right;border-left:2px solid #555;">Compras (${contas.compras})</th>
+                            <th style="${thStyle}text-align:right;">Custo Corr. (${contas.custo})</th>
+                            <th style="${thStyle}text-align:right;">Baixa Est. (${contas.custo})</th>
+                            <th style="${thStyle}text-align:right;border-left:2px solid #555;">→ Estoque</th>
+                            <th style="${thStyle}text-align:right;">Saldo Acum.</th>
+                            <th style="${thStyle}text-align:right;border-left:2px solid #555;">% POC</th>
+                            <th style="${thStyle}text-align:right;">Rec. POC Mês</th>
+                            <th style="${thStyle}text-align:right;">Rec. POC Acum.</th>
+                            <th style="${thStyle}text-align:right;">Adiant. PNC</th>
+                            <th style="${thStyle}text-align:right;border-left:2px solid #555;">Recebimentos</th>
+                            <th style="${thStyle}text-align:right;">Receb. Acum.</th>
+                            <th style="${thStyle}text-align:right;">Tributos</th>
+                            <th style="${thStyle}text-align:right;border-left:2px solid #555;">Margem Bruta</th>
+                            <th style="${thStyle}text-align:right;">Margem %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${linhas.map((r, i) => `
+                        <tr style="border-bottom:1px solid #dee2e6;${i%2===0?'background:#fafafa;':'background:white;'}">
+                            <td style="padding:6px 10px;font-weight:700;font-size:12px;white-space:nowrap;">${formatMes(r.m)}</td>
+                            ${tdR(formatMoney(r.lanc.custoMensal||0), '#495057', true)}
+                            ${tdR(formatMoney(r.custoCorrenteM), r.custoCorrenteM>0?'#dc3545':'')}
+                            ${tdR(r.baixaEstoqueM>0 ? formatMoney(r.baixaEstoqueM) : '—', r.baixaEstoqueM>0?'#dc3545':'')}
+                            ${tdR(formatMoney(r.comprasEstoqueM), '#856404')}
+                            ${tdR(formatMoney(r.estoqueAcum), '#856404', true)}
+                            ${tdC('<strong>'+(r.pocPerc).toFixed(2)+'%</strong>', '#11998e')}
+                            ${tdR(r.recPOCMes>0?formatMoney(r.recPOCMes):'—', r.recPOCMes>0?'#28a745':'#aaa')}
+                            ${tdR(formatMoney(r.recPOCAcum), '#28a745', true)}
+                            ${tdR(formatMoney(r.adiantamento), '#6c757d')}
+                            ${tdR(r.recebMes>0?formatMoney(r.recebMes):'—', r.recebMes>0?'#4facfe':'')}
+                            ${tdR(formatMoney(r.recebAcum), '#4facfe', true)}
+                            ${tdR(r.tribTotal>0?formatMoney(r.tribTotal):'—', r.tribTotal>0?'#eb3349':'')}
+                            ${tdR(r.recPOCMes>0||r.custoTotalM>0 ? formatMoney(r.margemBruta) : '—', r.margemBruta>=0?'#11998e':'#dc3545', true)}
+                            ${tdR(r.recPOCMes>0 ? r.margemPerc.toFixed(1)+'%' : '—', r.margemBruta>=0?'#11998e':'#dc3545')}
+                        </tr>`).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:#343a40;color:white;font-weight:700;font-size:12px;">
+                            <td style="padding:8px 10px;">TOTAIS</td>
+                            ${tdR(formatMoney(totalCompras),'white',true)}
+                            ${tdR(formatMoney(linhas.reduce((s,r)=>s+r.custoCorrenteM,0)),'#ffd',true)}
+                            ${tdR(formatMoney(linhas.reduce((s,r)=>s+r.baixaEstoqueM,0)),'#ffd',true)}
+                            ${tdR(formatMoney(linhas.reduce((s,r)=>s+r.comprasEstoqueM,0)),'#ffc',true)}
+                            ${tdR(formatMoney(ult?.estoqueAcum||0),'#ffc',true)}
+                            ${tdC((ult?.pocPerc||0).toFixed(2)+'%','#9fe')}
+                            ${tdR(formatMoney(totalRecPOC),'#9fe',true)}
+                            ${tdR(formatMoney(ult?.recPOCAcum||0),'#9fe',true)}
+                            ${tdR(formatMoney(ult?.adiantamento||0),'#ccc',true)}
+                            ${tdR(formatMoney(totalReceb),'#9cf',true)}
+                            ${tdR(formatMoney(totalReceb),'#9cf',true)}
+                            ${tdR(formatMoney(totalTrib),'#faa',true)}
+                            ${tdR(formatMoney(totalMargem),totalMargem>=0?'#9fe':'#faa',true)}
+                            ${tdR(totalMargemPct.toFixed(1)+'%',totalMargem>=0?'#9fe':'#faa',true)}
+                        </tr>
+                    </tfoot>
+                </table>
+                </div>`;
+
+            // ── Painel de unidades ───────────────────────────────────────────────────
+            const unidadesHtml = `
+                <div style="overflow-x:auto; margin-top:4px;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                    <thead>
+                        <tr style="background:#495057;color:white;">
+                            <th style="${thStyle}text-align:left;">Unidade</th>
+                            <th style="${thStyle}text-align:left;">Cliente</th>
+                            <th style="${thStyle}text-align:center;">m²</th>
+                            <th style="${thStyle}text-align:center;">Situação</th>
+                            <th style="${thStyle}text-align:center;">Data Venda</th>
+                            <th style="${thStyle}text-align:right;">Valor Venda</th>
+                            <th style="${thStyle}text-align:right;">Custo Orçado</th>
+                            <th style="${thStyle}text-align:right;">Recebido Total</th>
+                            <th style="${thStyle}text-align:right;">Saldo a Receber</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${obra.unidades.map((u, i) => {
+                            const recebTotal = meses.reduce((s,m) => s+(obra.lancamentos[m].recebimentosPorUnidade?.[u.id]||0),0);
+                            const saldo = (u.valorVenda||0) - recebTotal;
+                            const situacao = u.vendida
+                                ? `<span style="color:#28a745;font-weight:700;">✅ Vendida</span>`
+                                : `<span style="color:#856404;">📦 Estoque</span>`;
+                            return `<tr style="border-bottom:1px solid #dee2e6;${i%2===0?'background:#fafafa;':''}">
+                                <td style="padding:6px 10px;font-weight:700;">${u.nome}</td>
+                                <td style="padding:6px 10px;color:#666;">${u.cliente||'—'}</td>
+                                <td style="padding:6px 10px;text-align:center;">${u.m2?.toFixed(2)}</td>
+                                <td style="padding:6px 10px;text-align:center;">${situacao}</td>
+                                <td style="padding:6px 10px;text-align:center;color:#666;">${u.dataVenda||'—'}</td>
+                                <td style="padding:6px 10px;text-align:right;font-weight:600;color:#667eea;">${u.vendida?formatMoney(u.valorVenda):'—'}</td>
+                                <td style="padding:6px 10px;text-align:right;">${formatMoney(u.custoUnitario)}</td>
+                                <td style="padding:6px 10px;text-align:right;color:${recebTotal>0?'#28a745':'#aaa'};font-weight:600;">${recebTotal>0?formatMoney(recebTotal):'—'}</td>
+                                <td style="padding:6px 10px;text-align:right;color:${saldo>0&&u.vendida?'#dc3545':'#aaa'};font-weight:600;">${u.vendida?formatMoney(saldo):'—'}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:#343a40;color:white;font-weight:700;">
+                            <td colspan="5" style="padding:8px 10px;">TOTAIS</td>
+                            <td style="padding:8px 10px;text-align:right;">${formatMoney(valorVendidoTotal)}</td>
+                            <td style="padding:8px 10px;text-align:right;">${formatMoney(obra.unidades.reduce((s,u)=>s+(u.custoUnitario||0),0))}</td>
+                            <td style="padding:8px 10px;text-align:right;">${formatMoney(meses.reduce((s,m)=>s+Object.values(obra.lancamentos[m].recebimentosPorUnidade||{}).reduce((a,b)=>a+b,0),0))}</td>
+                            <td style="padding:8px 10px;text-align:right;">${formatMoney(valorVendidoTotal - meses.reduce((s,m)=>s+Object.values(obra.lancamentos[m].recebimentosPorUnidade||{}).reduce((a,b)=>a+b,0),0))}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+                </div>`;
+
+            document.getElementById('relatorioContent').innerHTML = `
+                <div class="card">
+                    <h3>📊 Painel Executivo — ${obra.nome}</h3>
+                    <p style="color:#666;font-size:13px;margin-bottom:16px;">
+                        <strong>Empreendimento:</strong> ${obra.empreendimento} &nbsp;|&nbsp;
+                        <strong>Custo Orçado:</strong> ${formatMoney(obra.custoOrcado)} &nbsp;|&nbsp;
+                        <strong>Metragem:</strong> ${obra.metragemTotal?.toFixed(2)} m² &nbsp;|&nbsp;
+                        <strong>Unidades:</strong> ${obra.unidades.length} (${vendidasAll.length} vendidas)
+                    </p>
+                    ${kpiHtml}
+                </div>
+
+                <div class="card">
+                    <h3>📈 Evolução Mensal</h3>
+                    <p style="color:#666;font-size:12px;margin-bottom:12px;">
+                        Contas: Compras <strong>${contas.compras}</strong> | Estoque <strong>${contas.estoque}</strong> | Custo <strong>${contas.custo}</strong> | Receita <strong>${contas.receita}</strong> | Adiantamento <strong>${contas.adiantamento}</strong>
+                    </p>
+                    ${tabelaHtml}
+                </div>
+
+                <div class="card">
+                    <h3>🏠 Posição por Unidade</h3>
+                    ${unidadesHtml}
+                </div>
+            `;
+        }
+
+        // ===== DRE =====
+        function renderDRE() {
+            const obra = getObraAtual();
+            const el = document.getElementById('dreContent');
+            if (!obra) {
+                el.innerHTML = '<div class="alert alert-warning">Selecione uma obra na aba "Obras" primeiro.</div>';
+                return;
+            }
+
+            const meses = Object.keys(obra.lancamentos).sort();
+            if (meses.length === 0) {
+                el.innerHTML = '<div class="alert alert-info">Nenhum lançamento mensal cadastrado ainda.</div>';
+                return;
+            }
+
+            // Garantir que dreExtras exista na obra
+            if (!obra.dreExtras) obra.dreExtras = {};
+            meses.forEach(m => {
+                if (!obra.dreExtras[m]) obra.dreExtras[m] = { correcaoMonetaria: 0, receitaFinanceira: 0, aluguel: 0 };
+                if (obra.dreExtras[m].aluguel === undefined) obra.dreExtras[m].aluguel = 0; // migração
+            });
+
+            // Ler seleção atual do filtro (persistir no estado local via data-attr)
+            const elDre = document.getElementById('dreContent');
+            const modoAtual = elDre.dataset.modo || 'mensal';
+            const mesInicioAtual = elDre.dataset.mesInicio || meses[0];
+            const mesFimAtual = elDre.dataset.mesFim || meses[meses.length - 1];
+
+            // ── Meses selecionados ───────────────────────────────────────────────────
+            const mesesSel = meses.filter(m => m >= mesInicioAtual && m <= mesFimAtual);
+
+            // ── Função para calcular DRE de um conjunto de meses ────────────────────
+            function calcDRE(mesesCalc) {
+                let recFiscal = 0, recContabil = 0;
+                let correcao = 0, recFin = 0, aluguel = 0;
+
+                mesesCalc.forEach(m => {
+                    const lanc = obra.lancamentos[m];
+                    recFiscal   += lanc.recebimentosTotaisMes || 0;
+                    recContabil += lanc.receitaPOCMensal || 0;
+                    const ext = obra.dreExtras[m] || {};
+                    correcao += parseFloat(ext.correcaoMonetaria) || 0;
+                    recFin   += parseFloat(ext.receitaFinanceira) || 0;
+                    aluguel  += parseFloat(ext.aluguel) || 0;
+                });
+
+                const aliq = obra.aliquotas;
+                const pisPct    = (aliq.PIS    || 0) / 100;
+                const cofinsPct = (aliq.COFINS || 0) / 100;
+                const irpjPct   = (aliq.IRPJ   || 0) / 100;
+                const csllPct   = (aliq.CSLL   || 0) / 100;
+
+                // Tributos s/ vendas
+                const pisFisc    = recFiscal   * pisPct;
+                const pisCont    = recContabil * pisPct;
+                const cofinsFisc = recFiscal   * cofinsPct;
+                const cofinsCont = recContabil * cofinsPct;
+                const irpjFisc   = recFiscal   * irpjPct;
+                const irpjCont   = recContabil * irpjPct;
+                const csllFisc   = recFiscal   * csllPct;
+                const csllCont   = recContabil * csllPct;
+
+                // Ajuste CPC 47 = Receita Contábil - Receita Fiscal (pode ser negativo)
+                const ajuste47 = recContabil - recFiscal;
+
+                // Tributos s/ outras receitas (correções + aluguel + financeiras)
+                const pisOutras    = (correcao * pisPct)    + (aluguel * pisPct);
+                const cofinsOutras = (correcao * cofinsPct) + (aluguel * cofinsPct);
+                const irpjOutras   = (correcao * irpjPct)   + (aluguel * 0.048) + (recFin * 0.15);
+                const csllOutras   = (correcao * csllPct)   + (aluguel * 0.0288) + (recFin * 0.09);
+
+                // Totais
+                const totalPisFisc    = pisFisc    + pisOutras;
+                const totalPisCont    = pisCont    + pisOutras;
+                const totalCofinsFisc = cofinsFisc + cofinsOutras;
+                const totalCofinsCont = cofinsCont + cofinsOutras;
+                const totalIrpjFisc   = irpjFisc   + irpjOutras;
+                const totalIrpjCont   = irpjCont   + irpjOutras;
+                const totalCsllFisc   = csllFisc   + csllOutras;
+                const totalCsllCont   = csllCont   + csllOutras;
+
+                return {
+                    recFiscal, recContabil, ajuste47,
+                    pisFisc, pisCont, cofinsFisc, cofinsCont,
+                    irpjFisc, irpjCont, csllFisc, csllCont,
+                    correcao, recFin, aluguel,
+                    pisOutras, cofinsOutras, irpjOutras, csllOutras,
+                    totalPisFisc, totalPisCont,
+                    totalCofinsFisc, totalCofinsCont,
+                    totalIrpjFisc, totalIrpjCont,
+                    totalCsllFisc, totalCsllCont,
+                    aliq
+                };
+            }
+
+            const d = calcDRE(mesesSel);
+
+            // ── Helpers de renderização ─────────────────────────────────────────────
+            const fmtF = v => `<span style="color:#495057;font-weight:600;">${formatMoney(v)}</span>`;
+            const fmtC = v => `<span style="color:#667eea;font-weight:600;">${formatMoney(v)}</span>`;
+            const fmtDiff = v => `<span style="color:${Math.abs(v)<0.01?'#aaa':v>=0?'#28a745':'#dc3545'};font-weight:700;">${formatMoney(v)}</span>`;
+
+            function dreRow(label, fiscal, contabil, bold=false, bg='', desc='') {
+                const diff = contabil - fiscal;
+                return `<tr style="border-bottom:1px solid #e9ecef;${bg}">
+                    <td style="padding:9px 14px;font-size:13px;${bold?'font-weight:700;':''}color:#333;">
+                        ${label}${desc?`<br><small style="color:#888;font-weight:400;font-size:11px;">${desc}</small>`:''}
+                    </td>
+                    <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtF(fiscal)}</td>
+                    <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtC(contabil)}</td>
+                    <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtDiff(diff)}</td>
+                </tr>`;
+            }
+
+            function dreSection(title) {
+                return `<tr style="background:#e9ecef;">
+                    <td colspan="4" style="padding:8px 14px;font-weight:700;font-size:12px;color:#495057;letter-spacing:.5px;text-transform:uppercase;">
+                        ${title}
+                    </td>
+                </tr>`;
+            }
+
+            function dreTotal(label, fiscal, contabil) {
+                const diff = contabil - fiscal;
+                return `<tr style="background:#343a40;color:white;">
+                    <td style="padding:10px 14px;font-weight:800;font-size:13px;">${label}</td>
+                    <td style="padding:10px 14px;text-align:right;font-size:13px;font-weight:700;">${formatMoney(fiscal)}</td>
+                    <td style="padding:10px 14px;text-align:right;font-size:13px;font-weight:700;color:#adf;">${formatMoney(contabil)}</td>
+                    <td style="padding:10px 14px;text-align:right;font-size:13px;font-weight:700;color:${Math.abs(diff)<0.01?'#aaa':diff>=0?'#9fe':'#faa'}">${formatMoney(diff)}</td>
+                </tr>`;
+            }
+
+            // ── Inputs de outras receitas por mês ───────────────────────────────────
+            const inputsMeses = meses.map(m => {
+                const ext = obra.dreExtras[m] || {};
+                return `
+                <div style="background:white;border-radius:8px;border:1px solid #dee2e6;padding:12px;min-width:180px;">
+                    <div style="font-weight:700;color:#667eea;margin-bottom:8px;font-size:13px;">📅 ${formatMes(m)}</div>
+                    <div class="form-group" style="margin-bottom:8px;">
+                        <label style="font-size:11px;">Correções Monetárias (R$)</label>
+                        <input type="number" step="0.01" value="${ext.correcaoMonetaria||0}"
+                            onchange="salvarDREExtra('${m}','correcaoMonetaria',this.value)"
+                            style="padding:6px;font-size:12px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:8px;">
+                        <label style="font-size:11px;">Receitas Financeiras (R$)</label>
+                        <input type="number" step="0.01" value="${ext.receitaFinanceira||0}"
+                            onchange="salvarDREExtra('${m}','receitaFinanceira',this.value)"
+                            style="padding:6px;font-size:12px;">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:11px;">🏢 Aluguel (R$)</label>
+                        <input type="number" step="0.01" value="${ext.aluguel||0}"
+                            onchange="salvarDREExtra('${m}','aluguel',this.value)"
+                            style="padding:6px;font-size:12px;border-color:#856404;">
+                    </div>
+                </div>`;
+            }).join('');
+
+            // ── Período selecionado (label) ──────────────────────────────────────────
+            const labelPeriodo = mesesSel.length === 1
+                ? formatMes(mesesSel[0])
+                : `${formatMes(mesesSel[0])} a ${formatMes(mesesSel[mesesSel.length-1])} (${mesesSel.length} meses)`;
+
+            el.innerHTML = `
+            <div class="card">
+                <h3>📑 DRE — Comparativo Fiscal × Contábil</h3>
+                <p style="color:#666;font-size:13px;margin-bottom:16px;">
+                    <strong>${obra.nome}</strong> — ${obra.empreendimento} &nbsp;|&nbsp;
+                    Alíquotas: PIS ${d.aliq.PIS}% | COFINS ${d.aliq.COFINS}% | IRPJ ${d.aliq.IRPJ}% | CSLL ${d.aliq.CSLL}%
+                </p>
+
+                <!-- Filtros -->
+                <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;background:#f8f9fa;padding:16px;border-radius:8px;margin-bottom:20px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Mês Inicial</label>
+                        <select id="dreInicio" onchange="atualizarFiltroDRE()"
+                            style="padding:8px 12px;border:2px solid #ddd;border-radius:6px;font-size:13px;">
+                            ${meses.map(m => `<option value="${m}" ${m===mesInicioAtual?'selected':''}>${formatMes(m)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">Mês Final</label>
+                        <select id="dreFim" onchange="atualizarFiltroDRE()"
+                            style="padding:8px 12px;border:2px solid #ddd;border-radius:6px;font-size:13px;">
+                            ${meses.map(m => `<option value="${m}" ${m===mesFimAtual?'selected':''}>${formatMes(m)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:8px;padding-bottom:2px;">
+                        ${[['mensal','📅 Mensal (último)'],['trimestre','📆 Trimestre'],['semestre','📆 Semestre'],['anual','📆 Anual'],['total','📊 Todo período']].map(([v,l]) =>
+                            `<button class="btn ${modoAtual===v?'btn-primary':'btn-secondary'}" onclick="atalhoFiltroDRE('${v}')"
+                                style="padding:8px 14px;font-size:12px;">${l}</button>`
+                        ).join('')}
+                    </div>
+                </div>
+
+                <!-- Badge período -->
+                <div style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:10px 18px;border-radius:8px;margin-bottom:20px;display:inline-block;font-weight:700;font-size:14px;">
+                    📅 Período: ${labelPeriodo}
+                </div>
+
+                <!-- Tabela DRE -->
+                <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;">
+                            <th style="padding:12px 14px;text-align:left;font-size:13px;width:40%;">DESCRIÇÃO</th>
+                            <th style="padding:12px 14px;text-align:right;font-size:13px;width:20%;">FISCAL</th>
+                            <th style="padding:12px 14px;text-align:right;font-size:13px;width:20%;">CONTÁBIL</th>
+                            <th style="padding:12px 14px;text-align:right;font-size:13px;width:20%;">DIFERENÇA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${dreSection('RECEITAS DE VENDAS')}
+                        ${dreRow('RECEITA DE VENDAS',
+                            d.recFiscal, d.recContabil, true, 'background:#fafafa;',
+                            'Fiscal = recebimentos do período | Contábil = Receita POC reconhecida')}
+                        ${dreRow('AJUSTE CPC 47',
+                            0, d.ajuste47, false, '',
+                            'Ajuste contábil para convergência com a receita fiscal (ECF) = Rec. Contábil − Rec. Fiscal')}
+
+                        ${dreSection('TRIBUTOS S/ RECEITA DE VENDAS')}
+                        ${dreRow(`PIS S/ VENDAS IMOB (${d.aliq.PIS}%)`,
+                            d.pisFisc, d.pisCont, false, 'background:#fafafa;',
+                            `Fiscal: ${formatMoney(d.recFiscal)} × ${d.aliq.PIS}% | Contábil: ${formatMoney(d.recContabil)} × ${d.aliq.PIS}%`)}
+                        ${dreRow(`COFINS S/ VENDAS IMOB (${d.aliq.COFINS}%)`,
+                            d.cofinsFisc, d.cofinsCont, false, '',
+                            `Fiscal: ${formatMoney(d.recFiscal)} × ${d.aliq.COFINS}% | Contábil: ${formatMoney(d.recContabil)} × ${d.aliq.COFINS}%`)}
+                        ${dreRow(`IRPJ S/ VENDAS IMOB (${d.aliq.IRPJ}%)`,
+                            d.irpjFisc, d.irpjCont, false, 'background:#fafafa;',
+                            `Fiscal: ${formatMoney(d.recFiscal)} × ${d.aliq.IRPJ}% | Contábil: ${formatMoney(d.recContabil)} × ${d.aliq.IRPJ}%`)}
+                        ${dreRow(`CSLL S/ VENDAS IMOB (${d.aliq.CSLL}%)`,
+                            d.csllFisc, d.csllCont, false, '',
+                            `Fiscal: ${formatMoney(d.recFiscal)} × ${d.aliq.CSLL}% | Contábil: ${formatMoney(d.recContabil)} × ${d.aliq.CSLL}%`)}
+
+                        ${dreSection('OUTRAS RECEITAS')}
+                        <tr style="background:#fafafa;border-bottom:1px solid #e9ecef;">
+                            <td style="padding:9px 14px;font-size:13px;color:#333;">
+                                CORREÇÕES MONETÁRIAS<br>
+                                <small style="color:#888;font-size:11px;">Valor informado nos campos abaixo</small>
+                            </td>
+                            <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtF(d.correcao)}</td>
+                            <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtC(d.correcao)}</td>
+                            <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtDiff(0)}</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #e9ecef;">
+                            <td style="padding:9px 14px;font-size:13px;color:#333;">
+                                RECEITAS FINANCEIRAS<br>
+                                <small style="color:#888;font-size:11px;">Valor informado nos campos abaixo</small>
+                            </td>
+                            <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtF(d.recFin)}</td>
+                            <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtC(d.recFin)}</td>
+                            <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtDiff(0)}</td>
+                        </tr>
+                        <tr style="background:#fff8e1;border-bottom:1px solid #e9ecef;">
+                            <td style="padding:9px 14px;font-size:13px;color:#333;">
+                                🏢 ALUGUEL<br>
+                                <small style="color:#888;font-size:11px;">Valor informado nos campos abaixo | IRPJ 4,80% | CSLL 2,88%</small>
+                            </td>
+                            <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtF(d.aluguel)}</td>
+                            <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtC(d.aluguel)}</td>
+                            <td style="padding:9px 14px;text-align:right;font-size:13px;">${fmtDiff(0)}</td>
+                        </tr>
+
+                        ${dreSection('TRIBUTOS S/ OUTRAS RECEITAS')}
+                        ${dreRow(`PIS S/ OUTRAS RECEITAS (${d.aliq.PIS}%)`,
+                            d.pisOutras, d.pisOutras, false, 'background:#fafafa;',
+                            `(Correções ${formatMoney(d.correcao)} + Aluguel ${formatMoney(d.aluguel)}) × ${d.aliq.PIS}%`)}
+                        ${dreRow(`COFINS S/ OUTRAS RECEITAS (${d.aliq.COFINS}%)`,
+                            d.cofinsOutras, d.cofinsOutras, false, '',
+                            `(Correções ${formatMoney(d.correcao)} + Aluguel ${formatMoney(d.aluguel)}) × ${d.aliq.COFINS}%`)}
+                        ${dreRow(`IRPJ S/ OUTRAS RECEITAS`,
+                            d.irpjOutras, d.irpjOutras, false, 'background:#fafafa;',
+                            `Correções ${formatMoney(d.correcao)} × ${d.aliq.IRPJ}% + Aluguel ${formatMoney(d.aluguel)} × 4,80% + Rec. Financeiras ${formatMoney(d.recFin)} × 15%`)}
+                        ${dreRow(`CSLL S/ OUTRAS RECEITAS`,
+                            d.csllOutras, d.csllOutras, false, '',
+                            `Correções ${formatMoney(d.correcao)} × ${d.aliq.CSLL}% + Aluguel ${formatMoney(d.aluguel)} × 2,88% + Rec. Financeiras ${formatMoney(d.recFin)} × 9%`)}
+
+                        ${dreSection('TOTAIS POR TRIBUTO')}
+                        ${dreRow(`TOTAL PIS`,    d.totalPisFisc,    d.totalPisCont,    true, 'background:#fff8f8;')}
+                        ${dreRow(`TOTAL COFINS`, d.totalCofinsFisc, d.totalCofinsCont, true, 'background:#fff8f8;')}
+                        ${dreRow(`TOTAL IRPJ`,   d.totalIrpjFisc,   d.totalIrpjCont,   true, 'background:#fff8f8;')}
+                        ${dreRow(`TOTAL CSLL`,   d.totalCsllFisc,   d.totalCsllCont,   true, 'background:#fff8f8;')}
+                        ${dreTotal('TOTAL GERAL DE TRIBUTOS',
+                            d.totalPisFisc+d.totalCofinsFisc+d.totalIrpjFisc+d.totalCsllFisc,
+                            d.totalPisCont+d.totalCofinsCont+d.totalIrpjCont+d.totalCsllCont)}
+                    </tbody>
+                </table>
+                </div>
+
+                <div style="margin-top:8px;padding:10px 14px;background:#e9ecef;border-radius:6px;font-size:11px;color:#666;">
+                    💡 <strong>Diferença</strong> = Contábil − Fiscal. Positivo = maior carga contábil; Negativo = maior carga fiscal no período.
+                    &nbsp;|&nbsp; <strong>Ajuste CPC 47</strong>: lançamento contábil para igualar o resultado contábil ao fiscal para fins de ECF.
+                </div>
+            </div>
+
+            <!-- Inputs de outras receitas -->
+            <div class="card">
+                <h3>✏️ Lançamento de Outras Receitas por Competência</h3>
+                <p style="color:#666;font-size:13px;margin-bottom:14px;">
+                    Informe os valores mensais de <strong>Correções Monetárias</strong>, <strong>Receitas Financeiras</strong> e <strong>Aluguel</strong>.
+                    Os campos são salvos automaticamente e usados no cálculo da DRE.<br>
+                    <small style="color:#856404;">🏢 Aluguel: IRPJ 4,80% | CSLL 2,88% | PIS e COFINS pela alíquota padrão da obra</small>
+                </p>
+                <div style="display:flex;gap:14px;flex-wrap:wrap;">
+                    ${inputsMeses}
+                </div>
+            </div>`;
+        }
+
+        function salvarDREExtra(mes, campo, valor) {
+            const obra = getObraAtual();
+            if (!obra) return;
+            if (!obra.dreExtras) obra.dreExtras = {};
+            if (!obra.dreExtras[mes]) obra.dreExtras[mes] = {};
+            obra.dreExtras[mes][campo] = parseFloat(valor) || 0;
+            saveDB();
+            renderDRE();
+        }
+
+        function atualizarFiltroDRE() {
+            const el = document.getElementById('dreContent');
+            el.dataset.modo = 'custom';
+            el.dataset.mesInicio = document.getElementById('dreInicio').value;
+            el.dataset.mesFim    = document.getElementById('dreFim').value;
+            renderDRE();
+        }
+
+        function atalhoFiltroDRE(modo) {
+            const obra = getObraAtual();
+            if (!obra) return;
+            const meses = Object.keys(obra.lancamentos).sort();
+            if (!meses.length) return;
+            const el = document.getElementById('dreContent');
+            el.dataset.modo = modo;
+            const ult = meses[meses.length - 1];
+            let ini = ult;
+            if (modo === 'mensal')    { ini = ult; }
+            else if (modo === 'trimestre') { ini = meses[Math.max(0, meses.length - 3)]; }
+            else if (modo === 'semestre')  { ini = meses[Math.max(0, meses.length - 6)]; }
+            else if (modo === 'anual')     { ini = meses[Math.max(0, meses.length - 12)]; }
+            else if (modo === 'total')     { ini = meses[0]; }
+            el.dataset.mesInicio = ini;
+            el.dataset.mesFim    = ult;
+            renderDRE();
+        }
+        function exportarDados() {
+            const dataStr = JSON.stringify(db, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `poc_tributos_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function exportarExcel() {
+            const obra = getObraAtual();
+            if (!obra) return alert('Selecione uma obra primeiro');
+
+            let csv = 'Mês;Custo_Mensal;Receita_POC_Acumulada;Receita_POC_Mensal;Adiantamento_Clientes;Recebimentos;Tributos_Total;Tipo_Diferido;Conta_Compras;Conta_Estoque;Conta_Receita;Conta_Adiantamento;Conta_Custo\n';
+
+            const contas = obra.contasContabeis || {};
+
+            Object.keys(obra.lancamentos).sort().forEach(m => {
+                const l = obra.lancamentos[m];
+                const totalTrib = (l.tributos?.PIS || 0) + (l.tributos?.COFINS || 0) + (l.tributos?.IRPJ || 0) + (l.tributos?.CSLL || 0);
+                csv += `${formatMes(m)};${(l.custoMensal || 0).toFixed(2)};${(l.receitaPOCAcumulada || 0).toFixed(2)};${(l.receitaPOCMensal || 0).toFixed(2)};${(l.adiantamentoClientes || 0).toFixed(2)};${(l.recebimentosTotaisMes || 0).toFixed(2)};${totalTrib.toFixed(2)};${l.diferidos?.tipo || 'ativo'};${contas.compras || '615'};${contas.estoque || '616'};${contas.receita || '2006'};${contas.adiantamento || '6005'};${contas.custo || '3015'}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `poc_tributos_${obra.nome}_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+        }
+
+        function importarDados(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (confirm(`Importar ${data.obras?.length || 0} obras?`)) {
+                        db = data;
+                        saveDB();
+                        renderObras();
+                        alert('✅ Dados importados com sucesso!');
+                    }
+                } catch (err) {
+                    alert('❌ Erro ao importar: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // A inicialização real é feita pelo Firebase após autenticação (window._initApp)
+        // init() é mantido como no-op para compatibilidade
+        init();
+    </script>
+</body>
+</html>
